@@ -19,7 +19,7 @@
         {
             byte[] dsd1x = new byte[dsd2x.Length / 2];
 
-            if ((dsd1x.Length & 1) == 0)
+            if ((dsd1x.Length & 1) != 0)
             {
                 throw new ArgumentException($"{nameof(dsd2x)}.Length / 2 must be even.", nameof(dsd2x));
             }
@@ -84,7 +84,7 @@
         {
             byte[] dsd1x = new byte[dsd4x.Length / 4];
 
-            if ((dsd1x.Length & 1) == 0)
+            if ((dsd1x.Length & 1) != 0)
             {
                 throw new ArgumentException($"{nameof(dsd4x)}.Length / 4 must be even.", nameof(dsd4x));
             }
@@ -150,7 +150,7 @@
         {
             byte[] dsd1x = new byte[dsd8x.Length / 8];
 
-            if ((dsd1x.Length & 1) == 0)
+            if ((dsd1x.Length & 1) != 0)
             {
                 throw new ArgumentException($"{nameof(dsd8x)}.Length / 8 must be even.", nameof(dsd8x));
             }

@@ -1,5 +1,9 @@
 ﻿namespace NAudio.Dsd
 {
+    /// <summary>
+    /// Represents the header information of a DSD (Direct Stream Digital) audio file, such as a DSF file.
+    /// </summary>
+    /// References: https://dsd-guide.com/sites/default/files/white-papers/DSFFileFormatSpec_E.pdf
     public class DsdHeader
     {
         /// <summary>

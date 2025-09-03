@@ -40,10 +40,22 @@
                 lock (_obj)
                 {
                     value = Math.Min(value, Length);
-                    value -= value % _waveFormat.BlockAlign;
+                    value -= value % _header.BlockSizePerChannel;
                     _stream.Position = value + _header.DataOffset;
                 }
             }
+        }
+
+        private readonly TimeSpan _totalTime;
+        public override TimeSpan TotalTime
+        {
+            get => _totalTime;
+        }
+
+        public override TimeSpan CurrentTime
+        {
+            get => TimeSpan.FromSeconds(((double)Position * 8) / (WaveFormat.SampleRate * WaveFormat.Channels));
+            set => throw new NotImplementedException();
         }
 
         /// <summary>
@@ -62,25 +74,27 @@
         {
         }
 
-        private DsdReader(Stream stream, bool selfInput)
+        private DsdReader(Stream stream, bool own)
         {
             ArgumentNullException.ThrowIfNull(stream);
 
             if (!stream.CanRead)
                 throw new ArgumentException("Stream must be readable", nameof(stream));
 
-            _own = selfInput;
+            _own = own;
             _stream = stream;
             _header = DsdHeader.GetHeader(_stream);
             _format = DsdFormatExtensions.FromSamplingFrequency((int)_header.SamplingFrequency);
+            _totalTime = TimeSpan.FromSeconds((_header.DataSize * 8) / (_header.SamplingFrequency * _header.ChannelCount));
             _waveFormat = new WaveFormat((int)_header.SamplingFrequency, (int)_header.BitsPerSample, (int)_header.ChannelCount);
+            Position = 0;
         }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            if (count % _waveFormat.BlockAlign != 0)
+            if (count % _header.BlockSizePerChannel != 0)
             {
-                throw new ArgumentException($"Must read complete blocks: requested {count}, block align is {WaveFormat.BlockAlign}");
+                throw new ArgumentException($"Must read complete blocks: requested {count}, block align is {Header.BlockSizePerChannel}");
             }
             lock (_obj)
             {
@@ -94,10 +108,9 @@
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
+            if (disposing && _own && _stream != null)
             {
-                if (_own)
-                    _stream?.Dispose();
+                _stream.Dispose();
             }
             base.Dispose(disposing);
         }

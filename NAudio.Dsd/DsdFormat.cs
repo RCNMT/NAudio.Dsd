@@ -67,5 +67,18 @@
                 _ => throw new ArgumentOutOfRangeException(nameof(samplingFrequency), "Unsupported sampling frequency"),
             };
         }
+
+        public static string ToFriendlyString(this DsdFormat format, bool @short = true)
+        {
+            return format switch
+            {
+                DsdFormat.DSD64 => "DSD64" + (@short ? "" : " (2.8224 MHz)"),
+                DsdFormat.DSD128 => "DSD128" + (@short ? "" : " (5.6448 MHz)"),
+                DsdFormat.DSD256 => "DSD256" + (@short ? "" : " (11.2896 MHz)"),
+                DsdFormat.DSD512 => "DSD512" + (@short ? "" : " (22.5792 MHz)"),
+                DsdFormat.DSD1024 => "DSD1024" + (@short ? "" : " (45.1584 MHz)"),
+                _ => "Unknown DSD Format",
+            };
+        }
     }
 }
