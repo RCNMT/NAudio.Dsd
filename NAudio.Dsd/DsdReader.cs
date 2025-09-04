@@ -1,4 +1,6 @@
-﻿namespace NAudio.Dsd
+﻿using System.Reflection.PortableExecutable;
+
+namespace NAudio.Dsd
 {
     /// <summary>
     /// Provides functionality to read DSD (Direct Stream Digital) audio files, such as DSF files, and exposes the audio data as a WaveStream.
@@ -54,8 +56,8 @@
 
         public override TimeSpan CurrentTime
         {
-            get => TimeSpan.FromSeconds(((double)Position * 8) / (WaveFormat.SampleRate * WaveFormat.Channels));
-            set => throw new NotImplementedException();
+            get => TimeSpan.FromSeconds(Position * 8 / (_header.SamplingFrequency * _header.ChannelCount));
+            set => Position = (long)(value.TotalSeconds * _header.SamplingFrequency * _header.ChannelCount / 8);
         }
 
         /// <summary>
