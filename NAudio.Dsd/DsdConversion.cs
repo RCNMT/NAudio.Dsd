@@ -14,7 +14,6 @@
         /// </summary>
         /// <param name="dsd2x">DSD audio data byte array. must be in DSD128, DSD256, DSD512, or DSD1024 format.</param>
         /// <returns>Byte array containing the downsampled DSD1x audio data. The length of the output array is half the length of the input byte array.</returns>
-
         public static unsafe byte[] DSD2xToDSD1x_FIR2nd(byte[] dsd2x)
         {
             byte[] dsd1x = new byte[dsd2x.Length / 2];

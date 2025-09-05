@@ -65,7 +65,7 @@
             }
         }
 
-        public DopProvider(string path, int ratio = 1) : this(new DsdReader(File.OpenRead(path)), true, ratio)
+        public DopProvider(string path, int ratio = 1) : this(new DsdReader(path), true, ratio)
         {
         }
 
