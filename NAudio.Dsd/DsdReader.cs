@@ -1,6 +1,4 @@
-﻿using System.Reflection.PortableExecutable;
-
-namespace NAudio.Dsd
+﻿namespace NAudio.Dsd
 {
     /// <summary>
     /// Provides functionality to read DSD (Direct Stream Digital) audio files, such as DSF files, and exposes the audio data as a WaveStream.
@@ -60,7 +58,12 @@ namespace NAudio.Dsd
             set => Position = (long)(value.TotalSeconds * _header.SamplingFrequency * _header.ChannelCount / 8);
         }
 
-        public bool IsMSB { get; }
+        public bool IsMSBF { get; }
+
+        public bool IsLSBF
+        {
+            get => !IsMSBF;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DsdReader"/> class that reads from the specified file path.
@@ -91,7 +94,7 @@ namespace NAudio.Dsd
             _format = DsdFormatExtensions.FromSamplingFrequency((int)_header.SamplingFrequency);
             _totalTime = TimeSpan.FromSeconds((_header.DataSize * 8) / (_header.SamplingFrequency * _header.ChannelCount));
             _waveFormat = new WaveFormat((int)_header.SamplingFrequency, (int)_header.BitsPerSample, (int)_header.ChannelCount);
-            IsMSB = _header.BitsPerSample == 8;
+            IsMSBF = _header.BitsPerSample == 8;
             Position = 0;
         }
 

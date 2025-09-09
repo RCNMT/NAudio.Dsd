@@ -68,6 +68,31 @@
             };
         }
 
+        /// <summary>
+        /// Converts the DsdFormat to DSD rate multiplier (1 for DSD64, 2 for DSD128, etc.).
+        /// </summary>
+        /// <param name="format"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        public static int GetDsdRate(this DsdFormat format)
+        {
+            return format switch
+            {
+                DsdFormat.DSD64 => 1,
+                DsdFormat.DSD128 => 2,
+                DsdFormat.DSD256 => 4,
+                DsdFormat.DSD512 => 8,
+                DsdFormat.DSD1024 => 16,
+                _ => throw new ArgumentOutOfRangeException(nameof(format), "Unsupported DSD format"),
+            };
+        }
+
+        /// <summary>
+        /// Converts the DsdFormat to a user-friendly string representation.
+        /// </summary>
+        /// <param name="format"></param>
+        /// <param name="short"></param>
+        /// <returns></returns>
         public static string ToFriendlyString(this DsdFormat format, bool @short = true)
         {
             return format switch
