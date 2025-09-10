@@ -1,6 +1,6 @@
-﻿namespace NAudio.Dsd.Dsd2Dxd
+﻿namespace NAudio.Dsd.Dsd2Pcm
 {
-    public class Dsd2DxdContext
+    public class Dsd2PcmContext
     {
         public int Delay1;
         public int Delay2;
@@ -11,7 +11,7 @@
         public byte[] Fifo = null!;
         public double[][] Tables = null!;
 
-        public static void Reset(Dsd2DxdContext ctx)
+        public static void Reset(Dsd2PcmContext ctx)
         {
             for (int i = 0; i < ctx.Fifo.Length; ++i)
                 ctx.Fifo[i] = 0x69; // silence pattern
@@ -20,9 +20,9 @@
             ctx.Delay2 = ctx.Delay1;
         }
 
-        public static Dsd2DxdContext Clone(Dsd2DxdContext ctx)
+        public static Dsd2PcmContext Clone(Dsd2PcmContext ctx)
         {
-            Dsd2DxdContext p2 = new()
+            Dsd2PcmContext p2 = new()
             {
                 NumTables = ctx.NumTables,
                 IsLSBFirst = ctx.IsLSBFirst,

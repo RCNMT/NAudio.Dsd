@@ -1,6 +1,6 @@
-﻿namespace NAudio.Dsd.Dsd2Dxd
+﻿namespace NAudio.Dsd.Dsd2Pcm
 {
-    public class Dsd2DxdConversion
+    public class Dsd2PcmConversion
     {
         private static readonly byte[] _bitReverse = [
             0x00, 0x80, 0x40, 0xC0, 0x20, 0xA0, 0x60, 0xE0, 0x10, 0x90, 0x50, 0xD0, 0x30, 0xB0, 0x70, 0xF0,
@@ -29,38 +29,21 @@
         public int Decimation { get; }
         public int DsdRate { get; }
 
-        private readonly Dsd2DxdContext _context;
+        private readonly Dsd2PcmContext _dsd2dxdCtx;
 
         /// <summary>
         /// Create a DSD to PCM conversion instance
         /// </summary>
         /// <param name="inputCtx">DSD input context</param>
         /// <param name="outputCtx">DXD output context</param>
-        public Dsd2DxdConversion(InputContext inputCtx, OutputContext outputCtx)
+        public Dsd2PcmConversion(InputContext inputCtx, OutputContext outputCtx)
         {
             DsdRate = inputCtx.DsdRate;
             IsLSBFirst = inputCtx.IsLSBFirst;
             FilterType = outputCtx.FilterType;
             Decimation = outputCtx.Decimation;
 
-            _context = Init(FilterType, IsLSBFirst, Decimation, DsdRate);
-        }
-
-        /// <summary>
-        /// Create a DSD to PCM conversion instance
-        /// </summary>
-        /// <param name="filtType">Filter type</param>
-        /// <param name="lsbf">Is LSB first</param>
-        /// <param name="decimation">Decimation factor (e.g. 64 for DSD64 → 44.1kHz)</param>
-        /// <param name="dsdRate">DSD rate (1=DSD64, 2=DSD128, 4=DSD256)</param>
-        public Dsd2DxdConversion(FilterType filtType, bool lsbf, int decimation, int dsdRate)
-        {
-            DsdRate = dsdRate;
-            IsLSBFirst = lsbf;
-            FilterType = filtType;
-            Decimation = decimation;
-
-            _context = Init(FilterType, IsLSBFirst, Decimation, DsdRate);
+            _dsd2dxdCtx = Init(FilterType, IsLSBFirst, Decimation, DsdRate);
         }
 
         /// <summary>
@@ -75,8 +58,8 @@
         /// <param name="decimation">Decimation factor (e.g. 64 for DSD64 → 44.1kHz)</param>
         public void Translate(int blockSize, byte[] dsdData, int dsdStride, int dsdOffset, double[] pcmData, int pcmStride, int decimation)
         {
-            int fifoPosition = _context.FifoPosition;
-            int numFilterTables = _context.NumTables;
+            int fifoPosition = _dsd2dxdCtx.FifoPosition;
+            int numFilterTables = _dsd2dxdCtx.NumTables;
             int tableOffset = numFilterTables * 2 - 1;
             int dsdIndex = 0;
             int pcmIndex = 0;
@@ -89,11 +72,11 @@
                 int dsdByte = dsdData[dsdIndex + dsdOffset];
                 dsdIndex += dsdStride;
 
-                _context.Fifo[fifoPosition] = (byte)dsdByte;
+                _dsd2dxdCtx.Fifo[fifoPosition] = (byte)dsdByte;
 
-                int fifoReadIndex = (fifoPosition - numFilterTables) & FIFOMASK;
-                byte original = _context.Fifo[fifoReadIndex];
-                _context.Fifo[fifoReadIndex] = _bitReverse[original & 0xFF];
+                int fifoReadIndex = fifoPosition - numFilterTables & FIFOMASK;
+                byte original = _dsd2dxdCtx.Fifo[fifoReadIndex];
+                _dsd2dxdCtx.Fifo[fifoReadIndex] = _bitReverse[original & 0xFF];
 
                 if (--outputCount == 0)
                 {
@@ -101,20 +84,20 @@
 
                     double accumulator = 0.0;
 
-                    for (int t = 0; t < numFilterTables; ++t)
+                    for (int i = 0; i < numFilterTables; ++i)
                     {
-                        int fifoIdx1 = (fifoPosition - t) & FIFOMASK;
-                        int fifoIdx2 = (fifoPosition - tableOffset + t) & FIFOMASK;
+                        int fifoIdx1 = fifoPosition - i & FIFOMASK;
+                        int fifoIdx2 = fifoPosition - tableOffset + i & FIFOMASK;
 
-                        int val1 = _context.Fifo[fifoIdx1];
-                        int val2 = _context.Fifo[fifoIdx2];
+                        int val1 = _dsd2dxdCtx.Fifo[fifoIdx1];
+                        int val2 = _dsd2dxdCtx.Fifo[fifoIdx2];
 
-                        accumulator += _context.Tables[t][val1] + _context.Tables[t][val2];
+                        accumulator += _dsd2dxdCtx.Tables[i][val1] + _dsd2dxdCtx.Tables[i][val2];
                     }
 
-                    if (_context.Delay2 > 0)
+                    if (_dsd2dxdCtx.Delay2 > 0)
                     {
-                        _context.Delay2--;
+                        _dsd2dxdCtx.Delay2--;
                     }
                     else
                     {
@@ -123,10 +106,10 @@
                     }
                 }
 
-                fifoPosition = (fifoPosition + 1) & FIFOMASK;
+                fifoPosition = fifoPosition + 1 & FIFOMASK;
             }
 
-            _context.FifoPosition = fifoPosition;
+            _dsd2dxdCtx.FifoPosition = fifoPosition;
         }
 
         /// <summary>
@@ -135,9 +118,9 @@
         /// <param name="inputCtx">DSD input context</param>
         /// <param name="outputCtx">DXD output context</param>
         /// <returns></returns>
-        public static Dsd2DxdConversion CreateConversion(InputContext inputCtx, OutputContext outputCtx)
+        public static Dsd2PcmConversion CreateConversion(InputContext inputCtx, OutputContext outputCtx)
         {
-            return new Dsd2DxdConversion(inputCtx, outputCtx);
+            return new Dsd2PcmConversion(inputCtx, outputCtx);
         }
 
         /// <summary>
@@ -146,159 +129,125 @@
         /// <param name="inputCtx">DSD input context</param>
         /// <param name="outputCtx">DXD output context</param>
         /// <returns></returns>
-        public static Dsd2DxdConversion[] CreateConversions(InputContext inputCtx, OutputContext outputCtx)
+        public static Dsd2PcmConversion[] CreateConversions(InputContext inputCtx, OutputContext outputCtx)
         {
-            Dsd2DxdConversion[] conversions = new Dsd2DxdConversion[outputCtx.Channels];
+            Dsd2PcmConversion[] conversions = new Dsd2PcmConversion[outputCtx.Channels];
             for (int i = 0; i < inputCtx.Channels; ++i)
             {
-                conversions[i] = new Dsd2DxdConversion(inputCtx, outputCtx);
+                conversions[i] = new Dsd2PcmConversion(inputCtx, outputCtx);
             }
             return conversions;
         }
 
-        private static void Precalc(Dsd2DxdContext ctx, double[] htaps, int numCoeffs)
+        private static void Precalc(Dsd2PcmContext ctx, double[] htaps, int numCoeffs)
         {
-            int dsdSeq, bit, k;
-            uint t;
+            int k;
             double acc;
             bool lsbf = ctx.IsLSBFirst;
 
-            for (t = 0; t < ctx.NumTables; ++t)
+            for (int i = 0; i < ctx.NumTables; ++i)
             {
-                k = numCoeffs - (int)t * 8;
+                k = numCoeffs - i * 8;
                 k = k > 8 ? 8 : k;
 
-                int tableIdx = ctx.NumTables - 1 - (int)t;
+                int tableIdx = ctx.NumTables - 1 - i;
 
-                for (dsdSeq = 0; dsdSeq < 256; ++dsdSeq)
+                for (int dsdSeq = 0; dsdSeq < 256; ++dsdSeq)
                 {
                     acc = 0.0;
-                    for (bit = 0; bit < k; ++bit)
+                    for (int bit = 0; bit < k; ++bit)
                     {
                         acc += lsbf
-                            ? ((dsdSeq >> bit & 1) * 2 - 1) * htaps[t * 8 + bit]
-                            : ((dsdSeq >> 7 - bit & 1) * 2 - 1) * htaps[t * 8 + bit];
+                            ? ((dsdSeq >> bit & 1) * 2 - 1) * htaps[i * 8 + bit]
+                            : ((dsdSeq >> 7 - bit & 1) * 2 - 1) * htaps[i * 8 + bit];
                     }
                     ctx.Tables[tableIdx][dsdSeq] = acc;
                 }
             }
         }
 
-        private static Dsd2DxdContext Init(FilterType filtType, bool lsbf, int decimation, int dsdRate)
+        private static Dsd2PcmContext Init(FilterType filtType, bool lsbf, int decimation, int dsdRate)
         {
-            Dsd2DxdContext ctx = new();
-            int numCoeffs = 0;
-            double[] htaps = [];
-            bool err = false;
+            Dsd2PcmContext ctx = new();
+            int numCoeffs;
+            double[] htaps;
 
-            ctx.Fifo = new byte[FIFOSIZE];
-            if (dsdRate == 2)
+            if (dsdRate >= 2)
             {
-                if (decimation == 16)
+                if (decimation == 8)
                 {
-                    switch (filtType)
+                    htaps = Htaps.HtapsXld;
+                    ctx.Delay1 = 6;
+                }
+                else if (decimation == 16)
+                {
+                    if (filtType == FilterType.Chebyshev)
                     {
-                        case FilterType.Chebyshev:
-                            numCoeffs = 125;
-                            htaps = Htaps.HtapsDDR16To1Cheb;
-                            ctx.Decimation = 16;
-                            ctx.Delay1 = 6;
-                            break;
-                        case FilterType.Equalized:
-                            numCoeffs = 220;
-                            htaps = Htaps.HtapsDDR16To1EQ;
-                            ctx.Decimation = 16;
-                            ctx.Delay1 = 6;
-                            break;
-                        default:
-                            err = true;
-                            break;
+                        htaps = Htaps.HtapsDDR16To1Cheb;
+                        ctx.Delay1 = 6;
+                    }
+                    else
+                    {
+                        htaps = Htaps.HtapsDDR16To1EQ;
+                        ctx.Delay1 = 6;
                     }
                 }
                 else if (decimation == 32)
                 {
-                    switch (filtType)
+                    if (filtType == FilterType.Chebyshev)
                     {
-                        case FilterType.Chebyshev:
-                            numCoeffs = 300;
-                            htaps = Htaps.HtapsDDR32To1Cheb;
-                            ctx.Decimation = 32;
-                            ctx.Delay1 = 8;
-                            break;
-                        case FilterType.Equalized:
-                            numCoeffs = 250;
-                            htaps = Htaps.HtapsDDR32To1EQ;
-                            ctx.Decimation = 32;
-                            ctx.Delay1 = 8;
-                            break;
-                        default:
-                            err = true;
-                            break;
+                        htaps = Htaps.HtapsDDR32To1Cheb;
+                        ctx.Delay1 = 8;
+                    }
+                    else
+                    {
+                        htaps = Htaps.HtapsDDR32To1EQ;
+                        ctx.Delay1 = 8;
                     }
                 }
                 else if (decimation == 64)
                 {
-                    switch (filtType)
-                    {
-                        case FilterType.Chebyshev:
-                            numCoeffs = 700;
-                            htaps = Htaps.HtapsDDR64To1Cheb;
-                            ctx.Decimation = 64;
-                            ctx.Delay1 = 8;
-                            break;
-                        default:
-                            err = true;
-                            break;
-                    }
+                    htaps = Htaps.HtapsDDR64To1Cheb;
+                    ctx.Delay1 = 8;
+                }
+                else
+                {
+                    throw new ArgumentException("Unsupported decimation more than 64.");
                 }
             }
             else if (decimation == 8)
             {
                 if (filtType == FilterType.XLD)
                 {
-                    numCoeffs = 56;
                     htaps = Htaps.HtapsXld;
-                    ctx.Decimation = 8;
                     ctx.Delay1 = 6;
-                }
-                else if (filtType == FilterType.D2P)
-                {
-                    numCoeffs = 48;
-                    htaps = Htaps.HtapsD2P;
-                    ctx.Decimation = 8;
-                    ctx.Delay1 = 0;
                 }
                 else
                 {
-                    err = true;
+                    htaps = Htaps.HtapsD2P;
+                    ctx.Delay1 = 0;
                 }
             }
             else if (decimation == 16)
             {
-                numCoeffs = 112;
                 htaps = Htaps.Htaps16To1Xld;
-                ctx.Decimation = 16;
                 ctx.Delay1 = 6;
             }
             else if (decimation == 32)
             {
-                numCoeffs = 288;
                 htaps = Htaps.Htaps32To1Xld;
-                ctx.Decimation = 32;
                 ctx.Delay1 = 8;
             }
             else
             {
-                err = true;
-            }
-
-            if (err)
-            {
                 throw new ArgumentException("Unsupported combination of decimation and filter type.");
             }
 
+            numCoeffs = htaps.Length;
+            ctx.Fifo = new byte[FIFOSIZE];
             ctx.NumTables = (numCoeffs + 7) / 8;
             ctx.IsLSBFirst = lsbf;
+            ctx.Decimation = decimation;
             ctx.Tables = new double[ctx.NumTables][];
 
             for (int i = 0; i < ctx.NumTables; ++i)
@@ -307,7 +256,7 @@
             }
 
             Precalc(ctx, htaps, numCoeffs);
-            Dsd2DxdContext.Reset(ctx);
+            Dsd2PcmContext.Reset(ctx);
 
             return ctx;
         }

@@ -1,4 +1,4 @@
-﻿namespace NAudio.Dsd.Dsd2Dxd
+﻿namespace NAudio.Dsd.Dsd2Pcm
 {
     internal static class Htaps
     {

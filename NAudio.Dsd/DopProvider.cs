@@ -92,7 +92,8 @@
                 2 => DsdConversion.DSD2xToDSD1x_FIR2nd,
                 4 => DsdConversion.DSD4xToDSD1x_FIR2nd,
                 8 => DsdConversion.DSD8xToDSD1x_FIR2nd,
-                _ => throw new ArgumentOutOfRangeException(nameof(ratio), "Ratio must be 1, 2, 4, or 8")
+                16 => (dsdBuffer) => DsdConversion.DSD2xToDSD1x_FIR2nd(DsdConversion.DSD8xToDSD1x_FIR2nd(dsdBuffer)),
+                _ => throw new ArgumentOutOfRangeException(nameof(ratio), "Ratio must be 1, 2, 4, 8, or 16")
             };
             _buffered = new BufferedWaveProvider(_waveFormat)
             {
