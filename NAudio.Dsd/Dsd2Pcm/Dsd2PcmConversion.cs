@@ -28,6 +28,10 @@
         public bool IsLSBFirst { get; }
         public int Decimation { get; }
         public int DsdRate { get; }
+        public int StateSize
+        {
+            get => _dsd2dxdCtx.Fifo.Length - 1;
+        }
 
         private readonly Dsd2PcmContext _dsd2dxdCtx;
 
@@ -113,6 +117,14 @@
         }
 
         /// <summary>
+        /// Reset the internal state of the conversion instance
+        /// </summary>
+        public void Reset()
+        {
+            Dsd2PcmContext.Reset(_dsd2dxdCtx);
+        }
+
+        /// <summary>
         /// Create a DSD to PCM conversion instance
         /// </summary>
         /// <param name="inputCtx">DSD input context</param>
@@ -137,6 +149,18 @@
                 conversions[i] = new Dsd2PcmConversion(inputCtx, outputCtx);
             }
             return conversions;
+        }
+
+        /// <summary>
+        /// Reset multiple DSD to PCM conversion instances for multichannel processing
+        /// </summary>
+        /// <param name="conversions"></param>
+        public static void Reset(Dsd2PcmConversion[] conversions)
+        {
+            foreach (var conv in conversions)
+            {
+                conv.Reset();
+            }
         }
 
         private static void Precalc(Dsd2PcmContext ctx, double[] htaps, int numCoeffs)
@@ -217,15 +241,15 @@
             }
             else if (decimation == 8)
             {
-                if (filtType == FilterType.XLD)
-                {
-                    htaps = Htaps.HtapsXld;
-                    ctx.Delay1 = 6;
-                }
-                else
+                if (filtType == FilterType.D2P)
                 {
                     htaps = Htaps.HtapsD2P;
                     ctx.Delay1 = 0;
+                }
+                else
+                {
+                    htaps = Htaps.HtapsXld;
+                    ctx.Delay1 = 6;
                 }
             }
             else if (decimation == 16)
