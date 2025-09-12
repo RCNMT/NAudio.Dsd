@@ -14,7 +14,7 @@
         private readonly ConversionDelegate _conversion;
         private readonly DsdReader _source;
         private readonly BufferedWaveProvider _buffered;
-        private readonly AutoResetEvent _bufferReadyEvent = new(false);
+        private readonly AutoResetEvent _readyEvent = new(false);
         private Task _fillBufferTask;
         private CancellationTokenSource _cts = new();
         private CancellationToken _token;
@@ -61,18 +61,34 @@
                         _token = _cts.Token;
                         _fillBufferTask = Task.Run(FillBuffer);
                     }
+                    _readyEvent.Set();
                 }
             }
         }
 
+        /// <summary>
+        /// Creates a new DoP (DSD over PCM) provider from a DSD file path.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="ratio"></param>
         public DopProvider(string path, int ratio = 1) : this(new DsdReader(path), true, ratio)
         {
         }
 
+        /// <summary>
+        /// Creates a new DoP (DSD over PCM) provider from a stream containing DSD data.
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <param name="ratio"></param>
         public DopProvider(Stream stream, int ratio = 1) : this(new DsdReader(stream), false, ratio)
         {
         }
 
+        /// <summary>
+        /// Creates a new DoP (DSD over PCM) provider from an existing DsdReader instance.
+        /// </summary>
+        /// <param name="source">DsdReader instance to read DSD data from.</param>
+        /// <param name="ratio"></param>
         public DopProvider(DsdReader source, int ratio = 1) : this(source, false, ratio)
         {
         }
@@ -92,7 +108,7 @@
                 2 => DsdConversion.DSD2xToDSD1x_FIR2nd,
                 4 => DsdConversion.DSD4xToDSD1x_FIR2nd,
                 8 => DsdConversion.DSD8xToDSD1x_FIR2nd,
-                16 => (dsdBuffer) => DsdConversion.DSD2xToDSD1x_FIR2nd(DsdConversion.DSD8xToDSD1x_FIR2nd(dsdBuffer)),
+                16 => DsdConversion.DSD16xToDSD1x,
                 _ => throw new ArgumentOutOfRangeException(nameof(ratio), "Ratio must be 1, 2, 4, 8, or 16")
             };
             _buffered = new BufferedWaveProvider(_waveFormat)
@@ -127,7 +143,7 @@
                     while (_buffered.BufferedBytes + dopBuffer.Length > _buffered.BufferLength)
                     {
                         _token.ThrowIfCancellationRequested();
-                        _bufferReadyEvent.WaitOne(200);
+                        _readyEvent.WaitOne(200);
                     }
 
                     _buffered.AddSamples(dopBuffer, 0, dopBuffer.Length);
@@ -140,13 +156,13 @@
             finally
             {
                 _buffered.ReadFully = false;
-                _bufferReadyEvent.Reset();
+                _readyEvent.Reset();
             }
         }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            _bufferReadyEvent.Set();
+            _readyEvent.Set();
             lock (_obj)
             {
                 int read = _buffered.Read(buffer, offset, count);

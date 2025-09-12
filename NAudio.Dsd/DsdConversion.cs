@@ -204,5 +204,20 @@
 
             return dsd1x;
         }
+
+        /// <summary>
+        /// Converts DSD16x audio data to DSD1x using a combination of DSD8xToDSD1x_FIR2nd and DSD2xToDSD1x_FIR2nd methods. <br/>
+        /// <code>
+        /// Input      Output
+        /// DSD1024 => DSD64
+        /// </code>
+        /// </summary>
+        /// <param name="dsd16x">DSD audio data byte array. must be in DSD1024 format.</param>
+        /// <returns>Byte array containing the downsampled DSD1x audio data. The length of the output array is one-sixteenth the length of the input byte array.</returns>
+        [Obsolete("This method is deprecated. Use DSD16xToDSD1x_FIR4th instead for better performance and quality.")]
+        public static byte[] DSD16xToDSD1x(byte[] dsd16x)
+        {
+            return DSD2xToDSD1x_FIR2nd(DSD8xToDSD1x_FIR2nd(dsd16x));
+        }
     }
 }

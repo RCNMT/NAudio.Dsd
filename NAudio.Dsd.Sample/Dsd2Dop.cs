@@ -8,7 +8,7 @@ namespace NAudio.Dsd.Sample
     {
         public static void Run(string path)
         {
-            using DsdReader reader = new(path);
+            using var dsd = new DsdReader(path);
 
             // Required DoP sample rates in Hz.
             // These are DoP sample rates that are dependent on the audio device or DACs capabilities.
@@ -36,10 +36,10 @@ namespace NAudio.Dsd.Sample
                 }
             }
 
-            int dsdSampleRate = (int)reader.Header.SamplingFrequency;
+            int dsdSampleRate = (int)dsd.Header.SamplingFrequency;
 
             // DoP sample rate is 1/16 of the DSD sampling frequency.
-            int dopSampleRate = (int)reader.Header.SamplingFrequency / 16;
+            int dopSampleRate = (int)dsd.Header.SamplingFrequency / 16;
 
             // Adjust ratio if the file's sampling frequency is higher than the supported frequency.
             // For example, if the file is DSD256 (705600 Hz in DoP) and the supported is 176400 Hz, ratio will be 705600 / 176400 = 4.
@@ -60,7 +60,7 @@ namespace NAudio.Dsd.Sample
             Console.WriteLine($"Conversion Info: {inputName} to {outputName} {(ratio == 1 ? "(Skip)" : "")}");
             Console.WriteLine();
 
-            using DopProvider dop = new(reader, ratio: ratio);
+            using var dop = new DopProvider(dsd, ratio: ratio);
             using var wasapi = new WasapiOut(AudioClientShareMode.Exclusive, 200);
             wasapi.Init(dop);
             wasapi.Play();
@@ -71,24 +71,25 @@ namespace NAudio.Dsd.Sample
             bool seeking = false;
             Stopwatch stopwatch = Stopwatch.StartNew();
             TimeSpan time = TimeSpan.FromSeconds(10);
+            TimeSpan target = TimeSpan.FromSeconds(60 * 3); // 3 minutes
 
             while (wasapi.PlaybackState == PlaybackState.Playing)
             {
-                // Commented out seeking for demonstration purposes.
+                // This if condition is for demonstration purposes.
                 // Set seeking to true to enable seeking.
-                // Seek to 4:30 after 10 seconds.
+                // Seek to target after 10 seconds.
                 if (seeking && stopwatch.Elapsed > time)
                 {
-                    dop.CurrentTime = TimeSpan.FromSeconds(60 * 4 - 30);
+                    dop.CurrentTime = target;
                     seeking = false;
                 }
 
                 Console.SetCursorPosition(l, t);
                 Console.WriteLine($"Stopwatch: {stopwatch.Elapsed:m\\:ss}");
-                Console.WriteLine($"DSD Time: {reader.CurrentTime:m\\:ss} / {reader.TotalTime:m\\:ss}");
+                Console.WriteLine($"DSD Time: {dsd.CurrentTime:m\\:ss} / {dsd.TotalTime:m\\:ss}");
                 Console.WriteLine($"DoP Time: {dop.CurrentTime:m\\:ss} / {dop.TotalTime:m\\:ss}");
                 Console.WriteLine();
-                Console.WriteLine($"DSD Position: {reader.Position} / {reader.Length}");
+                Console.WriteLine($"DSD Position: {dsd.Position} / {dsd.Length}");
                 Console.WriteLine($"DoP Position: {dop.Position} / {dop.Length}");
                 Thread.Sleep(200);
             }
