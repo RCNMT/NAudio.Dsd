@@ -1,7 +1,4 @@
-﻿#pragma warning disable CS0219
-#pragma warning disable IDE0059
-
-using NAudio.Dsd.Sample;
+﻿using NAudio.Dsd.Sample;
 
 internal class Program
 {
@@ -11,7 +8,11 @@ internal class Program
 
         const string file = "DSD file path here";
 
+        // Convert DSD to DoP and play it using WASAPI in exclusive mode.
         Dsd2Dop.Run(file);
+
+        // Convert DSD to PCM and play it using WASAPI in shared mode.
+        //Dsd2Pcm.Run(file);
     }
 }
 
