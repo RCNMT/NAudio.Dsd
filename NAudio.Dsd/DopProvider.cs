@@ -8,7 +8,6 @@
         private readonly object _obj = new();
         private delegate byte[] ConversionDelegate(byte[] dsdBuffer);
         private readonly bool _own;
-        private readonly bool _isLittleEndian;
         private readonly int _ratio;
         private readonly int _frameSize;
         private readonly ConversionDelegate _conversion;
@@ -99,9 +98,8 @@
             _ratio = ratio;
             _source = source ?? throw new ArgumentNullException(nameof(source));
             _length = (long)(source.Length / _ratio * 1.5); // DoP is 1.5 times the size of DSD
-            _frameSize = (int)(_source.Header.BlockSizePerChannel * _source.Header.ChannelCount);
+            _frameSize = _source.Header.BlockSizePerChannel * _source.Header.ChannelCount;
             _waveFormat = new WaveFormat(_source.WaveFormat.SampleRate / (_ratio * 16), 24, _source.WaveFormat.Channels);
-            _isLittleEndian = _source.Header.BitsPerSample == 1;
             _conversion = ratio switch
             {
                 1 => dsdBuffer => dsdBuffer, // No conversion needed
@@ -138,7 +136,7 @@
                     if (read == 0) break;
 
                     byte[] dsdBuffer = _conversion(buffer);
-                    byte[] dopBuffer = DSDToDoP(dsdBuffer, (int)_source.Header.ChannelCount, dsdBuffer.Length / (int)_source.Header.ChannelCount);
+                    byte[] dopBuffer = DSDToDoP(dsdBuffer, _source.Header.ChannelCount, dsdBuffer.Length / _source.Header.ChannelCount);
 
                     while (_buffered.BufferedBytes + dopBuffer.Length > _buffered.BufferLength)
                     {
@@ -180,17 +178,31 @@
             byte[] dopBuffer = new byte[dopFrameCount * 6];
 
             int dopIndex = 0;
-            bool isArchLE = BitConverter.IsLittleEndian;    // Indicates the "endianness" of the architecture. True for little-endian, false for big-endian.
-            bool isSourceLE = _isLittleEndian;              // Indicates the "endianness" of the source DSD data. True for DSD LSB first, false for DSD MSB first.
+            bool isArchLE = BitConverter.IsLittleEndian;     // Indicates the "endianness" of the architecture. True for little-endian, false for big-endian.
+            bool isSourceLE = _source.Header.IsLittleEndian; // Indicates the "endianness" of the source DSD data. True for DSD LSB first, false for DSD MSB first.
+            bool interleaved = _source.Header.Interleaved;
 
             for (int i = 0; i < dopFrameCount; i++)
             {
-                int baseOffset = i * 2;
+                int baseOffset;
+                byte LMSB, LLSB, RMSB, RLSB;
 
-                byte LMSB = dsdBuffer[baseOffset];
-                byte LLSB = dsdBuffer[baseOffset + 1];
-                byte RMSB = dsdBuffer[numBytesPerChannel + baseOffset];
-                byte RLSM = dsdBuffer[numBytesPerChannel + baseOffset + 1];
+                if (interleaved)
+                {
+                    baseOffset = i * 4;
+                    LMSB = dsdBuffer[baseOffset];
+                    RMSB = dsdBuffer[baseOffset + 1];
+                    LLSB = dsdBuffer[baseOffset + 2];
+                    RLSB = dsdBuffer[baseOffset + 3];
+                }
+                else
+                {
+                    baseOffset = i * 2;
+                    LMSB = dsdBuffer[baseOffset];
+                    LLSB = dsdBuffer[baseOffset + 1];
+                    RMSB = dsdBuffer[numBytesPerChannel + baseOffset];
+                    RLSB = dsdBuffer[numBytesPerChannel + baseOffset + 1];
+                }
 
                 byte marker = ((i & 1) == 0) ? DOP_MARKER_05 : DOP_MARKER_FA;
 
@@ -199,7 +211,7 @@
                     LMSB = ReverseByteWithLookup(LMSB);
                     LLSB = ReverseByteWithLookup(LLSB);
                     RMSB = ReverseByteWithLookup(RMSB);
-                    RLSM = ReverseByteWithLookup(RLSM);
+                    RLSB = ReverseByteWithLookup(RLSB);
                 }
 
                 if (isArchLE)
@@ -207,7 +219,7 @@
                     dopBuffer[dopIndex++] = LLSB;
                     dopBuffer[dopIndex++] = LMSB;
                     dopBuffer[dopIndex++] = marker;
-                    dopBuffer[dopIndex++] = RLSM;
+                    dopBuffer[dopIndex++] = RLSB;
                     dopBuffer[dopIndex++] = RMSB;
                     dopBuffer[dopIndex++] = marker;
                 }
@@ -217,7 +229,7 @@
                     dopBuffer[dopIndex++] = LLSB;
                     dopBuffer[dopIndex++] = marker;
                     dopBuffer[dopIndex++] = RMSB;
-                    dopBuffer[dopIndex++] = RLSM;
+                    dopBuffer[dopIndex++] = RLSB;
                     dopBuffer[dopIndex++] = marker;
                 }
             }
