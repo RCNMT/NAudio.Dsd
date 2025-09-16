@@ -94,13 +94,13 @@ namespace NAudio.Dsd
             _own = own;
             _obj = new();
             _source = source;
-            _frameSize = (int)(_source.Header.BlockSizePerChannel * _source.Header.ChannelCount);
+            _frameSize = _source.Header.BlockSizePerChannel * _source.Header.ChannelCount;
             _readyEvent = new(false);
             _decimation = _source.WaveFormat.SampleRate / outputRate;
             _waveFormat = new WaveFormat(outputRate, bits, source.WaveFormat.Channels);
 
             _length = (long)(source.TotalTime.TotalSeconds * WaveFormat.AverageBytesPerSecond);
-            _inCtx = new InputContext(_source.IsLSBF, dsdRate, channels, (int)_source.Header.BlockSizePerChannel, _source.Length);
+            _inCtx = new InputContext(_source.IsLSBF, dsdRate, channels, _source.Header.BlockSizePerChannel, _source.Length, _source.Header.Interleaved);
             _outCtx = new OutputContext(_waveFormat.SampleRate, bits, _decimation, _inCtx.BlockSize, _inCtx.Channels, FilterType.Chebyshev);
             _dither = new Dither(dither, bits);
             _buffered = new BufferedWaveProvider(_waveFormat)

@@ -36,10 +36,10 @@ namespace NAudio.Dsd.Sample
                 }
             }
 
-            int dsdSampleRate = (int)dsd.Header.SamplingFrequency;
+            int dsdSampleRate = dsd.Header.SamplingFrequency;
 
             // DoP sample rate is 1/16 of the DSD sampling frequency.
-            int dopSampleRate = (int)dsd.Header.SamplingFrequency / 16;
+            int dopSampleRate = dsd.Header.SamplingFrequency / 16;
 
             // Adjust ratio if the file's sampling frequency is higher than the supported frequency.
             // For example, if the file is DSD256 (705600 Hz in DoP) and the supported is 176400 Hz, ratio will be 705600 / 176400 = 4.

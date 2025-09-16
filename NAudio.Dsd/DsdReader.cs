@@ -29,7 +29,7 @@
 
         public override long Length
         {
-            get => _header.DataSize;
+            get => _header.DataLength;
         }
 
         public override long Position
@@ -40,7 +40,14 @@
                 lock (_obj)
                 {
                     value = Math.Min(value, Length);
-                    value -= value % _header.BlockSizePerChannel;
+                    if (_header.Interleaved)
+                    {
+                        value -= value % _header.ChannelCount;
+                    }
+                    else
+                    {
+                        value -= value % _header.BlockSizePerChannel;
+                    }
                     _stream.Position = value + _header.DataOffset;
                 }
             }
@@ -91,9 +98,9 @@
             _own = own;
             _stream = stream;
             _header = DsdHeader.GetHeader(_stream);
-            _format = DsdFormatExtensions.FromSamplingFrequency((int)_header.SamplingFrequency);
-            _totalTime = TimeSpan.FromSeconds((_header.DataSize * 8) / (_header.SamplingFrequency * _header.ChannelCount));
-            _waveFormat = new WaveFormat((int)_header.SamplingFrequency, (int)_header.BitsPerSample, (int)_header.ChannelCount);
+            _format = DsdFormatExtensions.FromSamplingFrequency(_header.SamplingFrequency);
+            _totalTime = TimeSpan.FromSeconds((_header.DataLength * 8) / (_header.SamplingFrequency * _header.ChannelCount));
+            _waveFormat = new WaveFormat(_header.SamplingFrequency, _header.BitsPerSample, _header.ChannelCount);
             IsMSBF = _header.BitsPerSample == 8;
             Position = 0;
         }

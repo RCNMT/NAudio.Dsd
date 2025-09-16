@@ -29,7 +29,7 @@ namespace NAudio.Dsd.Sample
 
             int t = Console.CursorTop;
             int l = Console.CursorLeft;
-            bool seeking = true;
+            bool seeking = false;
             Stopwatch stopwatch = Stopwatch.StartNew();
             TimeSpan time = TimeSpan.FromSeconds(10);
             TimeSpan target = TimeSpan.FromSeconds(60 * 3 + 2); // 3 minutes
