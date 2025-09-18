@@ -65,12 +65,7 @@
             set => Position = (long)(value.TotalSeconds * _header.SamplingFrequency * _header.ChannelCount / 8);
         }
 
-        public bool IsMSBF { get; }
-
-        public bool IsLSBF
-        {
-            get => !IsMSBF;
-        }
+        public bool IsLSBF { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DsdReader"/> class that reads from the specified file path.
@@ -101,7 +96,7 @@
             _format = DsdFormatExtensions.FromSamplingFrequency(_header.SamplingFrequency);
             _totalTime = TimeSpan.FromSeconds((_header.DataLength * 8) / (_header.SamplingFrequency * _header.ChannelCount));
             _waveFormat = new WaveFormat(_header.SamplingFrequency, _header.BitsPerSample, _header.ChannelCount);
-            IsMSBF = _header.BitsPerSample == 8;
+            IsLSBF = _header.IsLittleEndian;
             Position = 0;
         }
 
