@@ -10,7 +10,7 @@ namespace NAudio.Dsd.Sample
         public static void Run(string path)
         {
             using var dsd = new DsdReader(path);
-            using var pcm = new PcmProvider(dsd, PcmFormat.PCM352_8, 32, DitherType.FWeighted);
+            using var pcm = new PcmProvider(dsd, PcmFormat.PCM352_8, 32, DitherType.FWeighted, FilterType.Kaiser);
 
             using var wasapi = new WasapiOut(AudioClientShareMode.Shared, 200);
 
@@ -32,7 +32,7 @@ namespace NAudio.Dsd.Sample
             bool seeking = false;
             Stopwatch stopwatch = Stopwatch.StartNew();
             TimeSpan time = TimeSpan.FromSeconds(10);
-            TimeSpan target = TimeSpan.FromSeconds(60 * 3 + 2); // 3 minutes
+            TimeSpan target = TimeSpan.FromSeconds(60 * 3); // 3 minutes
 
             while (wasapi.PlaybackState == PlaybackState.Playing)
             {

@@ -2,10 +2,10 @@
 {
     public struct InputContext
     {
-        public int DsdRate;
         public int Channels;
         public int DsdStride;
         public int BlockSize;
+        public int SampleRate;
         public int DsdChannelOffset;
         public bool IsLSBFirst;
         public bool Interleaved;
@@ -13,12 +13,12 @@
 
         public InputContext() { }
 
-        public InputContext(bool isLSBFirst, int dsdRate, int channels, int blockSize, long length, bool interleaved)
+        public InputContext(bool isLSBFirst, int sampleRate, int channels, int blockSize, long length, bool interleaved)
         {
             IsLSBFirst = isLSBFirst;
-            DsdRate = dsdRate;
             Channels = channels;
             DataLength = length;
+            SampleRate = sampleRate;
             Interleaved = interleaved;
             SetBlockSize(blockSize);
         }
