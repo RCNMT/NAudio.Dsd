@@ -55,7 +55,7 @@
             int M = taps - 1;
             int mid = M / 2;
             double[] h = new double[taps];
-            
+
             // Normalized cutoff frequency
             double fc = cutoffFactor * pcmRate / dsdRate;
 
@@ -140,7 +140,7 @@
             double fc = cutoffFactor * pcmRate / dsdRate;
 
             // Window function
-            double[] window = ChebyshevWindow(M , attenuationDb);
+            double[] window = ChebyshevWindow(M, attenuationDb);
 
             for (int n = 0; n < M; n++)
             {
@@ -217,34 +217,27 @@
             if (N == 1) return [1.0];
 
             int M = N - 1;
-            // tg parameter (sometimes called 'R' or 't' in literature)
-            double rippleLinear = Math.Pow(10.0, attenuationDb / 20.0); // 10^(A/20)
-            double tg = Math.Cosh(AcoshSafe(rippleLinear) / M);         // cosh( acosh(rippleLinear) / M )
 
-            // Build s[m] = T_{M}( tg * cos(pi*m/N) ), m = 0..M
-            // where T_M(x) = cosh(M*acosh(x)) if |x|>1, else cos(M*acos(x))
+            double rippleLinear = Math.Pow(10.0, attenuationDb / 20.0);
+            double tg = Math.Cosh(AcoshSafe(rippleLinear) / M);
+
             double[] s = new double[N];
             for (int m = 0; m <= M; ++m)
             {
-                double x = tg * Math.Cos(Math.PI * m / N); // argument to Chebyshev polynomial
+                double x = tg * Math.Cos(Math.PI * m / N);
                 double val;
                 if (Math.Abs(x) > 1.0)
                 {
-                    // use cosh(acosh(x)*M)
                     val = Math.Cosh(M * Acosh(Math.Abs(x)));
-                    // preserve sign for negative x when M is odd:
                     if (x < 0 && (M % 2 == 1)) val = -val;
                 }
                 else
                 {
-                    // use cos(M * acos(x))
                     val = Math.Cos(M * Math.Acos(x));
                 }
                 s[m] = val;
             }
 
-            // Now compute window samples via inverse discrete cosine-like sum:
-            // w[n] = (1/N) * ( s[0] + 2*sum_{m=1..M} s[m] * cos(2*pi*m*n / N) )
             double[] w = new double[N];
             for (int n = 0; n < N; ++n)
             {
@@ -256,7 +249,6 @@
                 w[n] = sum / N;
             }
 
-            // normalization: scale so maximum = 1.0 (standard convention)
             double max = 0.0;
             for (int i = 0; i < N; ++i)
             {
