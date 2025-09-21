@@ -10,7 +10,7 @@ namespace NAudio.Dsd.Sample
         public static void Run(string path)
         {
             using var dsd = new DsdReader(path);
-            using var pcm = new PcmProvider(dsd, PcmFormat.PCM352_8, 32, DitherType.FWeighted, FilterType.Kaiser);
+            using var pcm = new PcmProvider(dsd, PcmFormat.PCM352_8, 32, DitherType.FWeighted, FilterType.BlackmanHarris);
 
             using var wasapi = new WasapiOut(AudioClientShareMode.Shared, 200);
 
@@ -25,6 +25,8 @@ namespace NAudio.Dsd.Sample
             Console.WriteLine($"DSD Sample Rate: {dsdSampleRate} Hz ({inputName})");
             Console.WriteLine($"PCM Sample Rate: {pcmSampleRate} Hz");
             Console.WriteLine($"PCM Bit Dept: {pcm.WaveFormat.BitsPerSample}-bit");
+            Console.WriteLine();
+            Console.WriteLine($"Decimation: {(double)dsdSampleRate / (double)pcmSampleRate}");
             Console.WriteLine();
 
             int t = Console.CursorTop;
