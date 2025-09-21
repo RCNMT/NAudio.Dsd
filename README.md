@@ -1,4 +1,6 @@
 # NAudio.Dsd
+[![GitHub](https://img.shields.io/github/license/rcnmt/NAudio.Dsd)](https://github.com/RCNMT/NAudio.Dsd/blob/main/LICENSE) 
+[![Nuget](https://img.shields.io/nuget/v/NAudio.Dsd)](https://www.nuget.org/packages/NAudio.Dsd/)
 
 This is a DSD decoder library support to [NAudio](https://github.com/naudio/NAudio).
 
