@@ -2,9 +2,22 @@
 
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
+		
 		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		
+		<Version>1.0.0</Version>
+		<Authors>Rachanon Montree</Authors>
+		<SignAssembly>true</SignAssembly>
+		<Description>A DSD library for NAudio.</Description>
+		<PackageTags>C#,;.NET,;library,;audio,;dsd,;dsd2pcm,;dsd2dop</PackageTags>
+		<RepositoryUrl>https://github.com/RCNMT/NAudio.Dsd</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/RCNMT/NAudio.Dsd</PackageProjectUrl>
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<Copyright>© 2025 Rachanon Montree. All rights reserved.</Copyright>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -13,6 +26,11 @@
 	
 	<ItemGroup>
 		<PackageReference Include="NAudio.Core" Version="2.2.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="..\LICENSE" Pack="True" PackagePath="\" />
+		<None Include="..\README.md" Pack="True" PackagePath="\" />
 	</ItemGroup>
 
 </Project>

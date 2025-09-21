@@ -1,18 +1,26 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
 
-  <ItemGroup>
-    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
-  </ItemGroup>
+		<Title>NAudio DSD sample</Title>
+		<Authors>Rachanon Montree</Authors>
+		<RepositoryUrl>https://github.com/RCNMT/NAudio.Dsd</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/RCNMT/NAudio.Dsd</PackageProjectUrl>
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<Copyright>© 2025 Rachanon Montree. All rights reserved.</Copyright>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\NAudio.Dsd\NAudio.Dsd.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\NAudio.Dsd\NAudio.Dsd.csproj" />
+	</ItemGroup>
 
 </Project>
