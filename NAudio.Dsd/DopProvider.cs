@@ -98,7 +98,7 @@
             _ratio = ratio;
             _source = source ?? throw new ArgumentNullException(nameof(source));
             _length = (long)(source.Length / _ratio * 1.5); // DoP is 1.5 times the size of DSD
-            _frameSize = _source.Header.BlockSizePerChannel * _source.Header.ChannelCount;
+            _frameSize = _source.Header.FrameSize;
             _waveFormat = new WaveFormat(_source.WaveFormat.SampleRate / (_ratio * 16), 24, _source.WaveFormat.Channels);
             _conversion = ratio switch
             {

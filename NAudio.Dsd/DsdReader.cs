@@ -46,7 +46,7 @@
                     }
                     else
                     {
-                        value -= value % _header.BlockSizePerChannel;
+                        value -= value % (_header.FrameSize);
                     }
                     _stream.Position = value + _header.DataOffset;
                 }

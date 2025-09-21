@@ -118,6 +118,11 @@ namespace NAudio.Dsd
         public bool IsLittleEndian;
 
         /// <summary>
+        /// Frame size of audio data for all channels.
+        /// </summary>
+        public int FrameSize;
+
+        /// <summary>
         /// Reads and parses the DSD header from the given stream.
         /// </summary>
         /// <param name="stream">
@@ -170,6 +175,7 @@ namespace NAudio.Dsd
             header.IsLittleEndian = header.BitsPerSample == 1;
             header.MetadataOffset = header.DataLength;
             header.MetadataLength = stream.Length;
+            header.FrameSize = header.BlockSizePerChannel * header.ChannelCount;
             return header;
         }
 
@@ -258,6 +264,7 @@ namespace NAudio.Dsd
             header.SampleCount = header.DataLength * 8 / header.ChannelCount;
             header.BitsPerSample = 1;
             header.BlockSizePerChannel = 1024 * 2 * 2;
+            header.FrameSize = header.BlockSizePerChannel * header.ChannelCount;
             header.IsLittleEndian = false;
 
             return header;
