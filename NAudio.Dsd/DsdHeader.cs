@@ -240,11 +240,28 @@ namespace NAudio.Dsd
                 }
                 else if (chunkId == "DSD ")
                 {
-                    header.DataOffset = stream.Position;
-                    header.DataLength = chunkSize;
+                    var start = stream.Position;
+                    var possibleBlockSize = reader.ReadInt32BE();
+
+                    if (possibleBlockSize > 0 && possibleBlockSize % 8 == 0 && possibleBlockSize < 1_000_000)
+                    {
+                        // Non-interleaved
+                        header.Interleaved = false;
+                        header.BlockSizePerChannel = possibleBlockSize;
+                        header.DataOffset = stream.Position;
+                        header.DataLength = chunkSize - sizeof(int);
+                    }
+                    else
+                    {
+                        // Interleaved
+                        header.Interleaved = true;
+                        header.BlockSizePerChannel = 1024 * 2;
+                        header.DataOffset = start;
+                        header.DataLength = chunkSize;
+                    }
 
                     // Skip audio data to next chunk.
-                    stream.Position += chunkSize;
+                    stream.Position = start + chunkSize;
                 }
                 else if (chunkId == "ID3 ")
                 {
@@ -263,7 +280,6 @@ namespace NAudio.Dsd
             header.Interleaved = true;
             header.SampleCount = header.DataLength * 8 / header.ChannelCount;
             header.BitsPerSample = 1;
-            header.BlockSizePerChannel = 1024 * 2 * 2;
             header.FrameSize = header.BlockSizePerChannel * header.ChannelCount;
             header.IsLittleEndian = false;
 
