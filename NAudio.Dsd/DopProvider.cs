@@ -5,7 +5,7 @@
         private const byte DOP_MARKER_05 = 0x05;
         private const byte DOP_MARKER_FA = 0xFA;
 
-        private readonly object _obj = new();
+        private readonly object _lock = new();
         private delegate byte[] ConversionDelegate(byte[] dsdBuffer);
         private readonly bool _own;
         private readonly int _ratio;
@@ -48,7 +48,7 @@
             get => TimeSpan.FromSeconds(_position / WaveFormat.AverageBytesPerSecond);
             set
             {
-                lock (_obj)
+                lock (_lock)
                 {
                     _position = (long)(value.TotalSeconds * WaveFormat.AverageBytesPerSecond);
                     _seekRequested = true;
@@ -120,28 +120,38 @@
         private void FillBuffer()
         {
             byte[] buffer = new byte[_frameSize];
+            int channels = _source.Header.ChannelCount;
+            bool isClear = false;
+
             try
             {
-                while (_source.Position + _frameSize <= _source.Length)
+                while (_source.Position < _source.Length)
                 {
                     if (_seekRequested)
                     {
-                        lock (_obj)
+                        lock (_lock)
                         {
-                            _buffered.ClearBuffer();
                             _seekRequested = false;
+                            isClear = true;
                         }
                     }
+
                     int read = _source.Read(buffer, 0, _frameSize);
                     if (read == 0) break;
 
                     byte[] dsdBuffer = _conversion(buffer);
-                    byte[] dopBuffer = DSDToDoP(dsdBuffer, _source.Header.ChannelCount, dsdBuffer.Length / _source.Header.ChannelCount);
+                    byte[] dopBuffer = DSDToDoP(dsdBuffer, channels, (read / _ratio) / channels);
 
                     while (_buffered.BufferedBytes + dopBuffer.Length > _buffered.BufferLength)
                     {
                         _token.ThrowIfCancellationRequested();
                         _readyEvent.WaitOne(200);
+                    }
+
+                    if (isClear)
+                    {
+                        lock (_lock) _buffered.ClearBuffer();
+                        isClear = false;
                     }
 
                     _buffered.AddSamples(dopBuffer, 0, dopBuffer.Length);
@@ -161,7 +171,7 @@
         public override int Read(byte[] buffer, int offset, int count)
         {
             _readyEvent.Set();
-            lock (_obj)
+            lock (_lock)
             {
                 int read = _buffered.Read(buffer, offset, count);
                 _position += read;
