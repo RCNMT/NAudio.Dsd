@@ -51,6 +51,7 @@
         /// </summary>
         /// <param name="inputCtx">DSD input context</param>
         /// <param name="outputCtx">DXD output context</param>
+        /// <param name="coeff">Array of FIR coefficients</param>
         public Dsd2PcmConversion(InputContext inputCtx, OutputContext outputCtx, double[]? coeff = null)
         {
             _lock = new object();
@@ -116,11 +117,8 @@
         /// </summary>
         /// <param name="blockSize">Number of DSD bytes to process</param>
         /// <param name="dsdData">DSD input data</param>
-        /// <param name="dsdStride">DSD input stride</param>
         /// <param name="dsdOffset">DSD input offset</param>
         /// <param name="pcmData">PCM output data</param>
-        /// <param name="pcmStride">PCM output stride</param>
-        /// <param name="_decimation">Decimation factor (e.g. 64 for DSD64 → 44.1kHz)</param>
         public void Translate(int blockSize, byte[] dsdData, int dsdOffset, double[] pcmData)
         {
             lock (_lock)
@@ -178,8 +176,11 @@
         /// </summary>
         public void Reset()
         {
-            Array.Clear(_dsd2dxdCtx.Fifo, 0, _dsd2dxdCtx.Fifo.Length);
-            _dsd2dxdCtx.FifoPosition = 0;
+            lock (_lock)
+            {
+                Array.Clear(_dsd2dxdCtx.Fifo, 0, _dsd2dxdCtx.Fifo.Length);
+                _dsd2dxdCtx.FifoPosition = 0;
+            }
         }
 
         /// <summary>
@@ -206,8 +207,7 @@
         {
             foreach (var conv in conversions)
             {
-                Array.Clear(conv._dsd2dxdCtx.Fifo, 0, conv._dsd2dxdCtx.Fifo.Length);
-                conv._dsd2dxdCtx.FifoPosition = 0;
+                conv.Reset();
             }
         }
 
