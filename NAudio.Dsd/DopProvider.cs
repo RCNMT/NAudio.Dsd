@@ -1,4 +1,6 @@
-﻿namespace NAudio.Dsd
+﻿using NAudio.Dsd.Dsd2Dop;
+
+namespace NAudio.Dsd
 {
     public class DopProvider : WaveStream, IDisposable
     {
@@ -8,7 +10,6 @@
         private readonly object _lock = new();
         private delegate byte[] ConversionDelegate(byte[] dsdBuffer);
         private readonly bool _own;
-        private readonly int _ratio;
         private readonly int _frameSize;
         private readonly ConversionDelegate _conversion;
         private readonly DsdReader _source;
@@ -18,6 +19,12 @@
         private CancellationTokenSource _cts = new();
         private CancellationToken _token;
         private bool _seekRequested = false;
+
+        private readonly int _ratio;
+        public int Ratio
+        {
+            get { return _ratio; }
+        }
 
         private readonly WaveFormat _waveFormat;
         public override WaveFormat WaveFormat
@@ -65,12 +72,17 @@
             }
         }
 
+        public TimeSpan BufferSize
+        {
+            get => TimeSpan.FromMilliseconds(_buffered.BufferedBytes / _buffered.WaveFormat.AverageBytesPerSecond * 1000.0);
+        }
+
         /// <summary>
         /// Creates a new DoP (DSD over PCM) provider from a DSD file path.
         /// </summary>
         /// <param name="path"></param>
         /// <param name="ratio"></param>
-        public DopProvider(string path, int ratio = 1) : this(new DsdReader(path), true, ratio)
+        public DopProvider(string path, DopFormat format) : this(new DsdReader(path), format, true)
         {
         }
 
@@ -79,7 +91,7 @@
         /// </summary>
         /// <param name="stream"></param>
         /// <param name="ratio"></param>
-        public DopProvider(Stream stream, int ratio = 1) : this(new DsdReader(stream), false, ratio)
+        public DopProvider(Stream stream, DopFormat format) : this(new DsdReader(stream), format, false)
         {
         }
 
@@ -88,27 +100,30 @@
         /// </summary>
         /// <param name="source">DsdReader instance to read DSD data from.</param>
         /// <param name="ratio"></param>
-        public DopProvider(DsdReader source, int ratio = 1) : this(source, false, ratio)
+        public DopProvider(DsdReader source, DopFormat format) : this(source, format, false)
         {
         }
 
-        private DopProvider(DsdReader source, bool own, int ratio)
+        private DopProvider(DsdReader source, DopFormat format, bool own)
         {
+            int inputRate = source.WaveFormat.SampleRate;
+            int outputRate = format.GetSamplingFrequency();
             _own = own;
-            _ratio = ratio;
+            _ratio = inputRate / (outputRate * 16);
             _source = source ?? throw new ArgumentNullException(nameof(source));
-            _length = (long)(source.Length / _ratio * 1.5); // DoP is 1.5 times the size of DSD
-            _frameSize = _source.Header.FrameSize;
-            _waveFormat = new WaveFormat(_source.WaveFormat.SampleRate / (_ratio * 16), 24, _source.WaveFormat.Channels);
-            _conversion = ratio switch
+            _conversion = _ratio switch
             {
                 1 => dsdBuffer => dsdBuffer, // No conversion needed
                 2 => DsdConversion.DSD2xToDSD1x_FIR2nd,
                 4 => DsdConversion.DSD4xToDSD1x_FIR2nd,
                 8 => DsdConversion.DSD8xToDSD1x_FIR2nd,
                 16 => DsdConversion.DSD16xToDSD1x,
-                _ => throw new ArgumentOutOfRangeException(nameof(ratio), "Ratio must be 1, 2, 4, 8, or 16")
+                < 1 => throw new ArgumentException($"Invalid DoP format. {nameof(DopProvider)} does not support upsampling.", nameof(format)),
+                _ => throw new ArgumentException("Invalid DoP format", nameof(format)),
             };
+            _frameSize = _source.Header.FrameSize;
+            _length = (long)(source.Length / _ratio * 1.5); // DoP is 1.5 times the size of DSD
+            _waveFormat = new WaveFormat(_source.WaveFormat.SampleRate / (_ratio * 16), 24, _source.WaveFormat.Channels);
             _buffered = new BufferedWaveProvider(_waveFormat)
             {
                 BufferDuration = TimeSpan.FromSeconds(5),
