@@ -1,5 +1,4 @@
 ﻿using NAudio.CoreAudioApi;
-using NAudio.Dsd.Dsd2Dop;
 using NAudio.Wave;
 using System.Diagnostics;
 
@@ -10,7 +9,7 @@ namespace NAudio.Dsd.Sample
         public static void Run(string path)
         {
             using var dsd = new DsdReader(path);
-            using var dop = new DopProvider(dsd, DopFormat.DoP176_4); // Output (DoP) DSD64 in PCM 176.4kHz 24-bit
+            using var dop = new DopProvider(dsd);
             
             using var wasapi = new WasapiOut(AudioClientShareMode.Exclusive, 200);
             
@@ -18,17 +17,12 @@ namespace NAudio.Dsd.Sample
             wasapi.Play();
             wasapi.Volume = 0.02f;
 
-            int ratio = dop.Ratio;
             int dsdSampleRate = dsd.Header.SamplingFrequency;
             int dopSampleRate = dop.WaveFormat.SampleRate;
             string inputName = DsdFormatExtensions.FromSamplingFrequency(dsdSampleRate).ToFriendlyString();
-            string outputName = DsdFormatExtensions.FromSamplingFrequency(dsdSampleRate / ratio).ToFriendlyString();
 
             Console.WriteLine($"DSD Sample Rate: {dsdSampleRate} Hz ({inputName})");
-            Console.WriteLine($"DoP Sample Rate: {dopSampleRate} Hz ({outputName})");
-            Console.WriteLine();
-            Console.WriteLine($"Conversion Ratio: {ratio}");
-            Console.WriteLine($"Conversion Detail: {inputName} to {outputName} {(ratio == 1 ? "(Skip)" : "")}");
+            Console.WriteLine($"DoP Sample Rate: {dopSampleRate} Hz");
             Console.WriteLine();
 
             int t = Console.CursorTop;
