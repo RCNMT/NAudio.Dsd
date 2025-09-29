@@ -20,10 +20,7 @@ project.
 using var dsd = new DsdReader("path-to-dsd-file");
 
 // DoP encapsulation
-// Output DSD (64) over PCM (176.4 kHz 24-bit)
-using var dop = new DopProvider("path-to-dsd-file", DopFormat.DoP176_4);
-// Output DSD (128) over PCM (352.8 kHz 24-bit)
-using var dop = new DopProvider("path-to-dsd-file", DopFormat.DoP352_8);
+using var dop = new DopProvider("path-to-dsd-file");
 
 // PCM conversion
 // Output PCM 44.1 kHz, 32-bit (default), Dither TriangularPDF (default), Filter Kaiser (default)
