@@ -192,7 +192,7 @@ namespace NAudio.Dsd
             }
 
             var fileSize = reader.ReadInt64BE();
-            var formType = reader.ReadInt32();
+            var formType = reader.ReadString(4);
 
             while (stream.Position < fileSize + 12) // 12 = header size of FRM8
             {
@@ -201,7 +201,8 @@ namespace NAudio.Dsd
 
                 if (chunkId == "FVER")
                 {
-                    header.FormatVersion = reader.ReadInt32BE();
+                    string version = string.Concat(reader.ReadBytes(4));
+                    header.FormatVersion = int.Parse(version);
                 }
                 else if (chunkId == "PROP")
                 {
@@ -229,7 +230,12 @@ namespace NAudio.Dsd
                         else if (subId == "CMPR")
                         {
                             var compressionType = reader.ReadString(4);
-                            var compressionName = reader.ReadString(reader.ReadByte());
+                            int size = reader.ReadByte();
+                            if (sizeof(int) + sizeof(byte) + size != subSize)
+                            {
+                                size = (int)subSize - sizeof(int) - sizeof(byte);
+                            }
+                            var compressionName = reader.ReadString(size);
                         }
                         else
                         {
