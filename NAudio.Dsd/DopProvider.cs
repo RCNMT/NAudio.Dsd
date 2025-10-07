@@ -34,7 +34,7 @@ namespace NAudio.Dsd
         public override long Position
         {
             get => _position;
-            set => CurrentTime = TimeSpan.FromSeconds(value / WaveFormat.AverageBytesPerSecond);
+            set => CurrentTime = TimeSpan.FromSeconds(value / (float)WaveFormat.AverageBytesPerSecond);
         }
 
         public override TimeSpan TotalTime
@@ -44,7 +44,7 @@ namespace NAudio.Dsd
 
         public override TimeSpan CurrentTime
         {
-            get => TimeSpan.FromSeconds(_position / WaveFormat.AverageBytesPerSecond);
+            get => TimeSpan.FromSeconds(_position / (float)WaveFormat.AverageBytesPerSecond);
             set
             {
                 lock (_lock)
@@ -66,7 +66,7 @@ namespace NAudio.Dsd
 
         public TimeSpan BufferSize
         {
-            get => TimeSpan.FromMilliseconds(_buffered.BufferedBytes / _buffered.WaveFormat.AverageBytesPerSecond * 1000.0);
+            get => TimeSpan.FromMilliseconds(_buffered.BufferedBytes / (float)_buffered.WaveFormat.AverageBytesPerSecond * 1000.0f);
         }
 
         /// <summary>
@@ -92,7 +92,7 @@ namespace NAudio.Dsd
             _source = source ?? throw new ArgumentNullException(nameof(source));
             
             _frameSize = _source.Header.FrameSize;
-            _length = (long)(source.Length / 1.5); // DoP is 1.5 times the size of DSD
+            _length = (long)(source.Length / 1.5f); // DoP is 1.5 times the size of DSD
             _waveFormat = new WaveFormat(_source.WaveFormat.SampleRate / 16, 24, _source.WaveFormat.Channels);
             _buffered = new BufferedWaveProvider(_waveFormat)
             {

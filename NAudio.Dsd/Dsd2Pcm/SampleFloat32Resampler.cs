@@ -1,47 +1,47 @@
 ﻿namespace NAudio.Dsd.Dsd2Pcm
 {
-    public class SampleFloat64Resampler
+    public class SampleFloat32Resampler
     {
-        private readonly double _ratio;                // SourceRate / TargetRate
-        private readonly int _filterLength;            // FIR length
-        private readonly int _numPhases;               // Polyphase table size
-        private readonly double[][] _filterBank;       // [phase][tap]
-        private readonly List<double> _inputBuffer;
+        private readonly float _ratio;                  // SourceRate / TargetRate
+        private readonly int _filterLength;             // FIR length
+        private readonly int _numPhases;                // Polyphase table size
+        private readonly float[][] _filterBank;         // [phase][tap]
+        private readonly List<float> _inputBuffer;
 
-        public SampleFloat64Resampler(int sourceRate, int targetRate, int filterLength = 64 * 2, int numPhases = 1024 * 2)
+        public SampleFloat32Resampler(int sourceRate, int targetRate, int filterLength = 64 * 2, int numPhases = 1024 * 2)
         {
             if (sourceRate <= 0 || targetRate <= 0)
                 throw new ArgumentException("Invalid sample rates.");
 
-            _ratio = (double)sourceRate / targetRate;
+            _ratio = (float)sourceRate / targetRate;
             _filterLength = filterLength;   // Quality vs. speed trade-off
             _numPhases = numPhases;         // More phases = smoother fractional steps
 
-            double cutoff = 0.45 * Math.Min(sourceRate, targetRate) / sourceRate;
+            float cutoff = 0.45f * MathF.Min(sourceRate, targetRate) / sourceRate;
             _filterBank = BuildPolyphaseBank(_filterLength, _numPhases, cutoff);
             _inputBuffer = [];
         }
 
-        public double[] Resample(double[] inputSamples)
+        public float[] Resample(float[] inputSamples)
         {
             _inputBuffer.AddRange(inputSamples);
             int inputCount = _inputBuffer.Count;
-            int estimatedOutput = (int)Math.Ceiling(inputCount / _ratio);
+            int estimatedOutput = (int)MathF.Ceiling(inputCount / _ratio);
             int outputIndex = 0;
-            double inputIndex = 0.0;
-            double[] output = new double[estimatedOutput];
+            float inputIndex = 0.0f;
+            float[] output = new float[estimatedOutput];
 
             while (true)
             {
-                int baseIndex = (int)Math.Floor(inputIndex);
+                int baseIndex = (int)MathF.Floor(inputIndex);
                 if (baseIndex + _filterLength >= inputCount)
                     break; // Not enough samples left to process
 
-                double frac = inputIndex - baseIndex;
+                float frac = inputIndex - baseIndex;
                 int phaseIndex = (int)(frac * _numPhases) % _numPhases;
-                double[] taps = _filterBank[phaseIndex];
+                float[] taps = _filterBank[phaseIndex];
 
-                double sum = 0d;
+                float sum = 0f;
                 for (int i = 0; i < _filterLength; i++)
                 {
                     sum += _inputBuffer[baseIndex +i] * taps[i];
@@ -60,24 +60,24 @@
             return output;
         }
 
-        private static double[][] BuildPolyphaseBank(int length, int phases, double cutoff)
+        private static float[][] BuildPolyphaseBank(int length, int phases, float cutoff)
         {
-            double[][] bank = new double[phases][];
+            float[][] bank = new float[phases][];
             for (int p = 0; p < phases; p++)
             {
-                double frac = (double)p / phases;
-                bank[p] = new double[length];
+                float frac = (float)p / phases;
+                bank[p] = new float[length];
 
-                double sum = 0;
+                float sum = 0;
                 for (int i = 0; i < length; i++)
                 {
-                    double x = i - (length - 1) / 2.0 - frac;
-                    double v = (x == 0)
+                    float x = i - (length - 1) / 2.0f - frac;
+                    float v = (x == 0)
                         ? 2 * cutoff
-                        : Math.Sin(2 * Math.PI * cutoff * x) / (Math.PI * x);
+                        : MathF.Sin(2 * MathF.PI * cutoff * x) / (MathF.PI * x);
 
                     // Hamming window
-                    v *= 0.54 - 0.46 * Math.Cos(2 * Math.PI * i / (length - 1));
+                    v *= 0.54f - 0.46f * MathF.Cos(2 * MathF.PI * i / (length - 1));
                     bank[p][i] = v;
                     sum += v;
                 }

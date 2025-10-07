@@ -11,7 +11,7 @@
         public int PcmBlockSize;
         public int OutBlockSize;
         public int BytesPerSample;
-        public double ScaleFactor;
+        public float ScaleFactor;
         public FilterType FilterType;
 
         public OutputContext(int rate, int bits, int decimation, int blockSize, int channels, FilterType filterType)
@@ -28,17 +28,17 @@
             SetGain(1);
         }
 
-        public void SetGain(double gain)
+        public void SetGain(float gain)
         {
-            ScaleFactor = 1.0;
-            double volume = Math.Pow(10.0, gain / 20.0);
+            ScaleFactor = 1.0f;
+            float volume = MathF.Pow(10.0f, gain / 20.0f);
 
             if (Bits != 32)
             {
-                ScaleFactor = Math.Pow(2.0, Bits - 1);
+                ScaleFactor = MathF.Pow(2.0f, Bits - 1);
             }
 
-            PeakLevel = (int)Math.Floor(ScaleFactor);
+            PeakLevel = (int)MathF.Floor(ScaleFactor);
             ScaleFactor *= volume;
         }
     }

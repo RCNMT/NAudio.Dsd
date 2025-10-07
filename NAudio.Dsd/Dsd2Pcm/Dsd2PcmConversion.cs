@@ -35,14 +35,14 @@ namespace NAudio.Dsd.Dsd2Pcm
         /// <param name="inputCtx">DSD input context</param>
         /// <param name="outputCtx">DXD output context</param>
         /// <param name="coeff">Array of FIR coefficients</param>
-        public Dsd2PcmConversion(InputContext inputCtx, OutputContext outputCtx, double[]? coeff = null)
+        public Dsd2PcmConversion(InputContext inputCtx, OutputContext outputCtx, float[]? coeff = null)
         {
             _lock = new object();
             _inputCtx = inputCtx;
             _outputCtx = outputCtx;
             _decimation = outputCtx.Decimation;
 
-            double[] h;
+            float[] h;
             if (coeff != null)
             {
                 h = coeff;
@@ -61,11 +61,11 @@ namespace NAudio.Dsd.Dsd2Pcm
                 };
                 var factor = _outputCtx.SampleRate switch
                 {
-                    <= 44100 => 0.49,
-                    <= 88200 => 0.48,
-                    <= 176400 => 0.46,
-                    <= 352800 => 0.46,
-                    <= 705600 => 0.40,
+                    <= 44100 => 0.49f,
+                    <= 88200 => 0.48f,
+                    <= 176400 => 0.46f,
+                    <= 352800 => 0.46f,
+                    <= 705600 => 0.40f,
                     _ => throw new ArgumentException("Invalid PCM sample rate")
                 };
                 h = _outputCtx.FilterType switch
@@ -84,13 +84,13 @@ namespace NAudio.Dsd.Dsd2Pcm
             _dsd2dxdCtx = new Dsd2PcmContext
             {
                 Fifo = new byte[FIFOSIZE],
-                Tables = new double[_size][],
+                Tables = new float[_size][],
                 IsLSBFirst = _inputCtx.IsLSBFirst,
                 Decimation = _outputCtx.Decimation,
             };
 
             for (int i = 0; i < _size; ++i)
-                _dsd2dxdCtx.Tables[i] = new double[256];
+                _dsd2dxdCtx.Tables[i] = new float[256];
 
             Precalc(_dsd2dxdCtx, h, h.Length);
         }
@@ -102,7 +102,7 @@ namespace NAudio.Dsd.Dsd2Pcm
         /// <param name="dsdData">DSD input data</param>
         /// <param name="dsdOffset">DSD input offset</param>
         /// <param name="pcmData">PCM output data</param>
-        public void Translate(int blockSize, byte[] dsdData, int dsdOffset, double[] pcmData)
+        public void Translate(int blockSize, byte[] dsdData, int dsdOffset, float[] pcmData)
         {
             lock (_lock)
             {
@@ -130,7 +130,7 @@ namespace NAudio.Dsd.Dsd2Pcm
                     {
                         outputCount = samplesPerOutput;
 
-                        double accumulator = 0.0;
+                        float accumulator = 0.0f;
 
                         for (int i = 0; i < numFilterTables; ++i)
                         {
@@ -172,7 +172,7 @@ namespace NAudio.Dsd.Dsd2Pcm
         /// <param name="inputCtx">DSD input context</param>
         /// <param name="outputCtx">DXD output context</param>
         /// <returns></returns>
-        public static Dsd2PcmConversion[] CreateConversions(InputContext inputCtx, OutputContext outputCtx, double[]? coeff = null)
+        public static Dsd2PcmConversion[] CreateConversions(InputContext inputCtx, OutputContext outputCtx, float[]? coeff = null)
         {
             Dsd2PcmConversion[] conversions = new Dsd2PcmConversion[outputCtx.Channels];
             for (int i = 0; i < inputCtx.Channels; ++i)
@@ -194,7 +194,7 @@ namespace NAudio.Dsd.Dsd2Pcm
             }
         }
 
-        private static void Precalc(Dsd2PcmContext ctx, double[] htaps, int numCoeffs)
+        private static void Precalc(Dsd2PcmContext ctx, float[] htaps, int numCoeffs)
         {
             int numTables = ctx.Tables.Length;
             bool lsbf = ctx.IsLSBFirst;
@@ -206,7 +206,7 @@ namespace NAudio.Dsd.Dsd2Pcm
 
                 for (int dsdSeq = 0; dsdSeq < 256; ++dsdSeq)
                 {
-                    double acc = 0.0;
+                    float acc = 0.0f;
 
                     for (int bit = 0; bit < validTaps; ++bit)
                     {

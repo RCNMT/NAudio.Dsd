@@ -79,12 +79,12 @@ namespace NAudio.Dsd
 
         public List<string> ConversionSteps { get; } = [];
 
-        public PcmProvider(string path, WaveFormat format, int latency, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, double[]? coeff = null) :
+        public PcmProvider(string path, WaveFormat format, int latency, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, float[]? coeff = null) :
             this(new DsdReader(path), format, latency, true, dither, filter, coeff)
         {
         }
 
-        public PcmProvider(DsdReader source, WaveFormat format, int latency, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, double[]? coeff = null) :
+        public PcmProvider(DsdReader source, WaveFormat format, int latency, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, float[]? coeff = null) :
             this(source, format, latency, false, dither, filter, coeff)
         {
         }
@@ -92,7 +92,7 @@ namespace NAudio.Dsd
         readonly int _latency;
         readonly int _bytesDelay;
 
-        private PcmProvider(DsdReader source, WaveFormat format, int latency, bool own, DitherType dither, FilterType filter, double[]? coeff)
+        private PcmProvider(DsdReader source, WaveFormat format, int latency, bool own, DitherType dither, FilterType filter, float[]? coeff)
         {
             if (format.Encoding != WaveFormatEncoding.Pcm)
             {
@@ -163,8 +163,8 @@ namespace NAudio.Dsd
             bool isClear = false;
             byte[] dsdData = new byte[_frameSize];
             byte[] pcmData = [];
-            double[] fltData = new double[fltSize];
-            double[] rspData;
+            float[] fltData = new float[fltSize];
+            float[] rspData;
 
             try
             {
@@ -205,7 +205,7 @@ namespace NAudio.Dsd
 
                         for (int j = 0; j < rspData.Length; ++j)
                         {
-                            double sample = rspData[j];
+                            float sample = rspData[j];
                             sample = _dither.ApplyDither(sample);
 
                             int pos = j * targetChannels * bytesPerSample + i * bytesPerSample;

@@ -3,11 +3,11 @@
     public class Dither
     {
         private readonly Random _random;
-        private readonly double _quantizationStep;
-        private double _previousError1;
-        private double _previousError2;
+        private readonly float _quantizationStep;
+        private float _previousError1;
+        private float _previousError2;
 
-        public delegate double DitherFunction(double input);
+        public delegate float DitherFunction(float input);
         public readonly DitherFunction ApplyDither;
 
         /// <summary>
@@ -20,9 +20,9 @@
         public Dither(DitherType ditherType, int bits, int? seed = null)
         {
             _random = seed.HasValue ? new Random(seed.Value) : new Random();
-            _previousError1 = 0.0;
-            _previousError2 = 0.0;
-            _quantizationStep = 1.0 / (Math.Pow(2, bits) - 1);
+            _previousError1 = 0.0f;
+            _previousError2 = 0.0f;
+            _quantizationStep = 1.0f / (MathF.Pow(2, bits) - 1);
 
             ApplyDither = ditherType switch
             {
@@ -41,93 +41,93 @@
 
         public void Reset()
         {
-            _previousError1 = 0.0;
-            _previousError2 = 0.0;
+            _previousError1 = 0.0f;
+            _previousError2 = 0.0f;
         }
 
         #region Dithering Algorithms
-        private double ApplyRectangularDither(double input)
+        private float ApplyRectangularDither(float input)
         {
             // RPDF (Rectangular Probability Density Function)
-            double noise = (_random.NextDouble() - 0.5) * _quantizationStep;
+            float noise = (_random.NextSingle() - 0.5f) * _quantizationStep;
             return input + noise;
         }
 
-        private double ApplyTriangularPdfDither(double input)
+        private float ApplyTriangularPdfDither(float input)
         {
             // TPDF (Triangular PDF) - sum of two RPDF noises
-            double r1 = (_random.NextDouble() - 0.5) * _quantizationStep;
-            double r2 = (_random.NextDouble() - 0.5) * _quantizationStep;
+            float r1 = (_random.NextSingle() - 0.5f) * _quantizationStep;
+            float r2 = (_random.NextSingle() - 0.5f) * _quantizationStep;
             return input + r1 + r2;
         }
 
-        private double ApplyHighPassTriangularPdfDither(double input)
+        private float ApplyHighPassTriangularPdfDither(float input)
         {
             // High-pass filtered TPDF
-            double r1 = (_random.NextDouble() - 0.5) * _quantizationStep;
-            double r2 = (_random.NextDouble() - 0.5) * _quantizationStep;
-            double r3 = (_random.NextDouble() - 0.5) * _quantizationStep;
+            float r1 = (_random.NextSingle() - 0.5f) * _quantizationStep;
+            float r2 = (_random.NextSingle() - 0.5f) * _quantizationStep;
+            float r3 = (_random.NextSingle() - 0.5f) * _quantizationStep;
 
             return input + r1 + r2 - r3;
         }
 
-        private double ApplyModifiedHighPassTriangularPdfDither(double input)
+        private float ApplyModifiedHighPassTriangularPdfDither(float input)
         {
             // Modified high-pass TPDF with different coefficients
-            double r1 = (_random.NextDouble() - 0.5) * _quantizationStep;
-            double r2 = (_random.NextDouble() - 0.5) * _quantizationStep;
-            double r3 = (_random.NextDouble() - 0.5) * _quantizationStep;
+            float r1 = (_random.NextSingle() - 0.5f) * _quantizationStep;
+            float r2 = (_random.NextSingle() - 0.5f) * _quantizationStep;
+            float r3 = (_random.NextSingle() - 0.5f) * _quantizationStep;
 
-            return input + 0.75 * r1 + 0.75 * r2 - 0.5 * r3;
+            return input + 0.75f * r1 + 0.75f * r2 - 0.5f * r3;
         }
 
-        private double ApplyLipshitzMinimallyAudibleDither(double input)
+        private float ApplyLipshitzMinimallyAudibleDither(float input)
         {
             // Lipshitz's minimally audible noise shaping
-            double r1 = (_random.NextDouble() - 0.5) * _quantizationStep;
-            double r2 = (_random.NextDouble() - 0.5) * _quantizationStep;
+            float r1 = (_random.NextSingle() - 0.5f) * _quantizationStep;
+            float r2 = (_random.NextSingle() - 0.5f) * _quantizationStep;
 
             // Simple noise shaping
-            double shapedNoise = r1 + r2 - _previousError1;
+            float shapedNoise = r1 + r2 - _previousError1;
             _previousError1 = r1;
 
             return input + shapedNoise;
         }
 
-        private double ApplyFWeightedDither(double input)
+        private float ApplyFWeightedDither(float input)
         {
             // F-weighted noise shaping (approximation)
-            double r1 = (_random.NextDouble() - 0.5) * _quantizationStep;
-            double r2 = (_random.NextDouble() - 0.5) * _quantizationStep;
+            float r1 = (_random.NextSingle() - 0.5f) * _quantizationStep;
+            float r2 = (_random.NextSingle() - 0.5f) * _quantizationStep;
 
             // First-order high-pass filter
-            double shapedNoise = r1 + r2 - 0.5 * _previousError1;
+            float shapedNoise = r1 + r2 - 0.5f * _previousError1;
             _previousError1 = shapedNoise;
 
             return input + shapedNoise;
         }
 
-        private double ApplyVanderkooyLipshitzDither(double input)
+        private float ApplyVanderkooyLipshitzDither(float input)
         {
             // Vanderkooy-Lipshitz noise shaping
-            double r1 = (_random.NextDouble() - 0.5) * _quantizationStep;
-            double r2 = (_random.NextDouble() - 0.5) * _quantizationStep;
+            float r1 = (_random.NextSingle() - 0.5f) * _quantizationStep;
+            float r2 = (_random.NextSingle() - 0.5f) * _quantizationStep;
 
             // Second-order noise shaping
-            double shapedNoise = r1 + r2 - 1.6 * _previousError1 + 0.64 * _previousError2;
+            float shapedNoise = r1 + r2 - 1.6f * _previousError1 + 0.64f * _previousError2;
             _previousError2 = _previousError1;
             _previousError1 = shapedNoise;
 
             return input + shapedNoise;
         }
 
-        private double ApplySoPdfDither(double input)
+        private float ApplySoPdfDither(float input)
         {
             // Second-order PDF dither
-            double r1 = (_random.NextDouble() - 0.5) * _quantizationStep;
-            double r2 = (_random.NextDouble() - 0.5) * _quantizationStep;
-            double r3 = (_random.NextDouble() - 0.5) * _quantizationStep;
-            double r4 = (_random.NextDouble() - 0.5) * _quantizationStep;
+            float r1 = (_random.NextSingle() - 0.5f) * _quantizationStep;
+            float r2 = (_random.NextSingle() - 0.5f) * _quantizationStep;
+            float r3 = (_random.NextSingle() - 0.5f) * _quantizationStep;
+            float r4 = (_random.NextSingle() - 0.5f) * _quantizationStep;
 
             return input + r1 + r2 + r3 + r4;
         }

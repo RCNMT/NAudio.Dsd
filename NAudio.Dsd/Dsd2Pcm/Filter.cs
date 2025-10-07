@@ -9,31 +9,31 @@
         /// <param name="pcmRate">Output PCM sample rate (Hz)</param>
         /// <param name="taps">Number of FIR taps</param>
         /// <param name="cutoffFactor">Normalized cutoff factor (e.g. 0.40, 0.45, 0.49)</param>
-        /// <returns>Array of FIR coefficients (double[])</returns>
-        public static double[] DesignHammingFir(int dsdRate, int pcmRate, int taps, double cutoffFactor = 0.45)
+        /// <returns>Array of FIR coefficients (float[])</returns>
+        public static float[] DesignHammingFir(int dsdRate, int pcmRate, int taps, float cutoffFactor = 0.45f)
         {
             if (taps % 2 == 0) taps++;
             int M = taps - 1;
             int mid = M / 2;
-            double[] h = new double[taps];
+            float[] h = new float[taps];
 
             // Normalized cutoff frequency
-            double fc = cutoffFactor * pcmRate / dsdRate;
+            float fc = cutoffFactor * pcmRate / dsdRate;
 
             for (int n = 0; n < M; n++)
             {
-                double x = n - mid;
+                float x = n - mid;
 
                 // Sinc function (ideal low-pass)
-                double sinc = (x == 0.0) ? 2.0 * fc : Math.Sin(2.0 * Math.PI * fc * x) / (Math.PI * x);
+                float sinc = (x == 0.0) ? 2.0f * fc : MathF.Sin(2.0f * MathF.PI * fc * x) / (MathF.PI * x);
 
                 // Window function
-                double window = HammingWindow(n, M);
+                float window = HammingWindow(n, M);
                 h[n] = sinc * window;
             }
 
             // Normalize to unity gain
-            double sum = 0;
+            float sum = 0;
             for (int n = 0; n < taps; n++) sum += h[n];
             for (int n = 0; n < taps; n++) h[n] /= sum;
 
@@ -48,34 +48,34 @@
         /// <param name="taps">Number of FIR taps</param>
         /// <param name="attenuationDb">Stopband attenuation in dB (e.g. 60, 80, 100)</param>
         /// <param name="cutoffFactor">Normalized cutoff factor (e.g. 0.40, 0.45, 0.49)</param>
-        /// <returns>Array of FIR coefficients (double[])</returns>
-        public static double[] DesignKaiserFir(int dsdRate, int pcmRate, int taps, double attenuationDb = 80, double cutoffFactor = 0.45)
+        /// <returns>Array of FIR coefficients (float[])</returns>
+        public static float[] DesignKaiserFir(int dsdRate, int pcmRate, int taps, float attenuationDb = 80, float cutoffFactor = 0.45f)
         {
             if (taps % 2 == 0) taps++;
             int M = taps - 1;
             int mid = M / 2;
-            double[] h = new double[taps];
+            float[] h = new float[taps];
 
             // Normalized cutoff frequency
-            double fc = cutoffFactor * pcmRate / dsdRate;
+            float fc = cutoffFactor * pcmRate / dsdRate;
 
             // Approximate Kaiser beta
-            double beta = ComputeKaiserBeta(attenuationDb);
+            float beta = ComputeKaiserBeta(attenuationDb);
 
             for (int n = 0; n < M; n++)
             {
                 int x = n - mid;
 
                 // Sinc function (ideal low-pass)
-                double sinc = (x == 0) ? 2.0 * fc : Math.Sin(2.0 * Math.PI * fc * x) / (Math.PI * x);
+                float sinc = (x == 0) ? 2.0f * fc : MathF.Sin(2.0f * MathF.PI * fc * x) / (MathF.PI * x);
 
                 // Window function
-                double window = KaiserWindow(n, M, beta);
+                float window = KaiserWindow(n, M, beta);
                 h[n] = sinc * window;
             }
 
             // Normalize to unity gain
-            double sum = 0;
+            float sum = 0;
             foreach (var v in h) sum += v;
             for (int i = 0; i < taps; i++) h[i] /= sum;
 
@@ -89,31 +89,31 @@
         /// <param name="pcmRate">Output PCM sample rate (Hz)</param>
         /// <param name="taps">Number of FIR taps</param>
         /// <param name="cutoffFactor">Normalized cutoff factor (e.g. 0.40, 0.45, 0.49)</param>
-        /// <returns>Array of FIR coefficients (double[])</returns>
-        public static double[] DesignBlackmanFir(int dsdRate, int pcmRate, int taps, double cutoffFactor = 0.45)
+        /// <returns>Array of FIR coefficients (float[])</returns>
+        public static float[] DesignBlackmanFir(int dsdRate, int pcmRate, int taps, float cutoffFactor = 0.45f)
         {
             if (taps % 2 == 0) taps++;
             int M = taps - 1;
             int mid = M / 2;
-            double[] h = new double[taps];
+            float[] h = new float[taps];
 
             // Normalized cutoff frequency
-            double fc = cutoffFactor * pcmRate / dsdRate;
+            float fc = cutoffFactor * pcmRate / dsdRate;
 
             for (int n = 0; n < M; n++)
             {
                 int x = n - mid;
 
                 // Sinc function (ideal low-pass)
-                double sinc = (x == 0) ? 2.0 * fc : Math.Sin(2.0 * Math.PI * fc * x) / (Math.PI * x);
+                float sinc = (x == 0) ? 2.0f * fc : MathF.Sin(2.0f * MathF.PI * fc * x) / (MathF.PI * x);
 
                 // Window function
-                double window = BlackmanWindow(n, M);
+                float window = BlackmanWindow(n, M);
                 h[n] = sinc * window;
             }
 
             // Normalize to unity gain
-            double sum = 0;
+            float sum = 0;
             foreach (var v in h) sum += v;
             for (int i = 0; i < taps; i++) h[i] /= sum;
 
@@ -128,33 +128,33 @@
         /// <param name="taps">Number of FIR taps</param>
         /// <param name="attenuationDb">Stopband attenuation in dB (e.g. 60, 80, 100)</param>
         /// <param name="cutoffFactor">Normalized cutoff factor (e.g. 0.40, 0.45, 0.49)</param>
-        /// <returns>Array of FIR coefficients (double[])</returns>
-        public static double[] DesignChebyshevFir(int dsdRate, int pcmRate, int taps, double attenuationDb = 80, double cutoffFactor = 0.45)
+        /// <returns>Array of FIR coefficients (float[])</returns>
+        public static float[] DesignChebyshevFir(int dsdRate, int pcmRate, int taps, float attenuationDb = 80, float cutoffFactor = 0.45f)
         {
             if (taps % 2 == 0) taps++;
             int M = taps - 1;
             int mid = M / 2;
-            double[] h = new double[taps];
+            float[] h = new float[taps];
 
             // Normalized cutoff frequency
-            double fc = cutoffFactor * pcmRate / dsdRate;
+            float fc = cutoffFactor * pcmRate / dsdRate;
 
             // Window function
-            double[] window = ChebyshevWindow(M, attenuationDb);
+            float[] window = ChebyshevWindow(M, attenuationDb);
 
             for (int n = 0; n < M; n++)
             {
                 int x = n - mid;
 
                 // Sinc function (ideal low-pass)
-                double sinc = (x == 0) ? 2.0 * fc : Math.Sin(2.0 * Math.PI * fc * x) / (Math.PI * x);
+                float sinc = (x == 0) ? 2.0f * fc : MathF.Sin(2.0f * MathF.PI * fc * x) / (MathF.PI * x);
 
                 // Apply Chebyshev window
                 h[n] = sinc * window[n];
             }
 
             // Normalize to unity gain
-            double sum = 0;
+            float sum = 0;
             foreach (var v in h) sum += v;
             for (int i = 0; i < taps; i++) h[i] /= sum;
 
@@ -168,31 +168,31 @@
         /// <param name="pcmRate">Output PCM sample rate (Hz)</param>
         /// <param name="taps">Number of FIR taps</param>
         /// <param name="cutoffFactor">Normalized cutoff factor (default 0.45)</param>
-        /// <returns>Array of FIR coefficients (double[])</returns>
-        public static double[] DesignBlackmanHarrisFir(int dsdRate, int pcmRate, int taps, double cutoffFactor = 0.45)
+        /// <returns>Array of FIR coefficients (float[])</returns>
+        public static float[] DesignBlackmanHarrisFir(int dsdRate, int pcmRate, int taps, float cutoffFactor = 0.45f)
         {
             if (taps % 2 == 0) taps++;
             int M = taps - 1;
             int mid = M / 2;
-            double[] h = new double[taps];
+            float[] h = new float[taps];
 
             // Normalized cutoff frequency
-            double fc = cutoffFactor * 0.5 * pcmRate / dsdRate;
+            float fc = cutoffFactor * 0.5f * pcmRate / dsdRate;
 
             for (int n = 0; n <= M; n++)
             {
-                double x = n - mid;
+                float x = n - mid;
 
                 // Sinc function (ideal low-pass)
-                double sinc = (x == 0) ? 2.0 * fc : Math.Sin(2.0 * Math.PI * fc * x) / (Math.PI * x);
+                float sinc = (x == 0) ? 2.0f * fc : MathF.Sin(2.0f * MathF.PI * fc * x) / (MathF.PI * x);
 
                 // Window function
-                double window = BlackmanHarrisWindow(n, M);
+                float window = BlackmanHarrisWindow(n, M);
                 h[n] = sinc * window;
             }
 
             // Normalize to unity gain
-            double sum = 0;
+            float sum = 0;
             foreach (var v in h) sum += v;
             for (int i = 0; i < taps; i++) h[i] /= sum;
 
@@ -200,115 +200,115 @@
         }
 
         #region Helpers
-        private static double Acosh(double x)
+        private static float Acosh(float x)
         {
-            return Math.Log(x + Math.Sqrt(x * x - 1.0));
+            return MathF.Log(x + MathF.Sqrt(x * x - 1.0f));
         }
 
-        private static double AcoshSafe(double x)
+        private static float AcoshSafe(float x)
         {
-            if (x < 1.0) x = 1.0;
-            return Math.Log(x + Math.Sqrt(x * x - 1.0));
+            if (x < 1.0) x = 1.0f;
+            return MathF.Log(x + MathF.Sqrt(x * x - 1.0f));
         }
 
-        private static double[] ChebyshevWindow(int N, double attenuationDb)
+        private static float[] ChebyshevWindow(int N, float attenuationDb)
         {
             if (N < 1) throw new ArgumentException("N must be >= 1", nameof(N));
-            if (N == 1) return [1.0];
+            if (N == 1) return [1.0f];
 
             int M = N - 1;
 
-            double rippleLinear = Math.Pow(10.0, attenuationDb / 20.0);
-            double tg = Math.Cosh(AcoshSafe(rippleLinear) / M);
+            float rippleLinear = MathF.Pow(10.0f, attenuationDb / 20.0f);
+            float tg = MathF.Cosh(AcoshSafe(rippleLinear) / M);
 
-            double[] s = new double[N];
+            float[] s = new float[N];
             for (int m = 0; m <= M; ++m)
             {
-                double x = tg * Math.Cos(Math.PI * m / N);
-                double val;
+                float x = tg * MathF.Cos(MathF.PI * m / N);
+                float val;
                 if (Math.Abs(x) > 1.0)
                 {
-                    val = Math.Cosh(M * Acosh(Math.Abs(x)));
+                    val = MathF.Cosh(M * Acosh(MathF.Abs(x)));
                     if (x < 0 && (M % 2 == 1)) val = -val;
                 }
                 else
                 {
-                    val = Math.Cos(M * Math.Acos(x));
+                    val = MathF.Cos(M * MathF.Acos(x));
                 }
                 s[m] = val;
             }
 
-            double[] w = new double[N];
+            float[] w = new float[N];
             for (int n = 0; n < N; ++n)
             {
-                double sum = s[0];
+                float sum = s[0];
                 for (int m = 1; m <= M; ++m)
                 {
-                    sum += 2.0 * s[m] * Math.Cos(2.0 * Math.PI * m * n / N);
+                    sum += 2.0f * s[m] * MathF.Cos(2.0f * MathF.PI * m * n / N);
                 }
                 w[n] = sum / N;
             }
 
-            double max = 0.0;
+            float max = 0.0f;
             for (int i = 0; i < N; ++i)
             {
-                double av = Math.Abs(w[i]);
+                float av = Math.Abs(w[i]);
                 if (av > max) max = av;
             }
-            if (max <= 0.0) max = 1.0;
+            if (max <= 0.0) max = 1.0f;
             for (int i = 0; i < N; ++i) w[i] /= max;
 
             return w;
         }
 
-        private static double HammingWindow(int n, int N)
+        private static float HammingWindow(int n, int N)
         {
-            return 0.54 - 0.46 * Math.Cos(2 * Math.PI * n / (N - 1));
+            return 0.54f - 0.46f * MathF.Cos(2 * MathF.PI * n / (N - 1));
         }
 
-        private static double KaiserWindow(int n, int N, double beta)
+        private static float KaiserWindow(int n, int N, float beta)
         {
-            double ratio = (2.0 * n) / (N - 1) - 1.0;
-            double arg = beta * Math.Sqrt(1.0 - ratio * ratio);
+            float ratio = (2.0f * n) / (N - 1) - 1.0f;
+            float arg = beta * MathF.Sqrt(1.0f - ratio * ratio);
             return BesselI0(arg) / BesselI0(beta);
         }
 
-        private static double BlackmanWindow(int n, int N)
+        private static float BlackmanWindow(int n, int N)
         {
-            const double a0 = 7938.0 / 18608.0;
-            const double a1 = 9240.0 / 18608.0;
-            const double a2 = 1430.0 / 18608.0;
+            const float a0 = 7938.0f / 18608.0f;
+            const float a1 = 9240.0f / 18608.0f;
+            const float a2 = 1430.0f / 18608.0f;
 
-            double term1 = 2.0 * Math.PI * n / (N - 1);
-            double term2 = 4.0 * Math.PI * n / (N - 1);
+            float term1 = 2.0f * MathF.PI * n / (N - 1);
+            float term2 = 4.0f * MathF.PI * n / (N - 1);
 
-            return a0 - a1 * Math.Cos(term1) + a2 * Math.Cos(term2);
+            return a0 - a1 * MathF.Cos(term1) + a2 * MathF.Cos(term2);
         }
 
-        private static double BlackmanHarrisWindow(int n, int N)
+        private static float BlackmanHarrisWindow(int n, int N)
         {
-            const double a0 = 0.35875;
-            const double a1 = 0.48829;
-            const double a2 = 0.14128;
-            const double a3 = 0.01168;
+            const float a0 = 0.35875f;
+            const float a1 = 0.48829f;
+            const float a2 = 0.14128f;
+            const float a3 = 0.01168f;
 
-            return a0 - a1 * Math.Cos(2.0 * Math.PI * n / N)
-                      + a2 * Math.Cos(4.0 * Math.PI * n / N)
-                      - a3 * Math.Cos(6.0 * Math.PI * n / N);
+            return a0 - a1 * MathF.Cos(2.0f * MathF.PI * n / N)
+                      + a2 * MathF.Cos(4.0f * MathF.PI * n / N)
+                      - a3 * MathF.Cos(6.0f * MathF.PI * n / N);
         }
 
-        private static double ComputeKaiserBeta(double attenuationDb)
+        private static float ComputeKaiserBeta(float attenuationDb)
         {
-            if (attenuationDb > 50) return 0.1102 * (attenuationDb - 8.7);
-            if (attenuationDb >= 21) return 0.5842 * Math.Pow(attenuationDb - 21, 0.4) + 0.07886 * (attenuationDb - 21);
-            return 0.0;
+            if (attenuationDb > 50) return 0.1102f * (attenuationDb - 8.7f);
+            if (attenuationDb >= 21) return 0.5842f * MathF.Pow(attenuationDb - 21, 0.4f) + 0.07886f * (attenuationDb - 21);
+            return 0.0f;
         }
 
-        private static double BesselI0(double x)
+        private static float BesselI0(float x)
         {
-            double sum = 1.0;
-            double y = x * x / 4.0;
-            double t = y;
+            float sum = 1.0f;
+            float y = x * x / 4.0f;
+            float t = y;
             int k = 1;
 
             while (t > 1e-10)

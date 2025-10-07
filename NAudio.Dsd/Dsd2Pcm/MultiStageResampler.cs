@@ -2,7 +2,7 @@
 {
     public class MultiStageResampler
     {
-        private readonly List<SampleFloat64Resampler> _stages = [];
+        private readonly List<SampleFloat32Resampler> _stages = [];
 
         public List<(int, int)> ConversionSteps { get; }
 
@@ -18,7 +18,7 @@
             {
                 (int max, int min) = item.Item1 >= item.Item2 ? (item.Item1, item.Item2) : (item.Item2, item.Item1);
                 int n = 64 * Math.Max(1, (max / min) - 1);
-                _stages.Add(new SampleFloat64Resampler(item.Item1, item.Item2, n, 1024));
+                _stages.Add(new SampleFloat32Resampler(item.Item1, item.Item2, n, 1024));
             }
         }
 
@@ -34,13 +34,13 @@
             {
                 (int max, int min) = item.Item1 >= item.Item2 ? (item.Item1, item.Item2) : (item.Item2, item.Item1);
                 int n = 64 * Math.Max(1, (max / min) - 1);
-                _stages.Add(new SampleFloat64Resampler(item.Item1, item.Item2, n, 1024));
+                _stages.Add(new SampleFloat32Resampler(item.Item1, item.Item2, n, 1024));
             }
         }
 
-        public double[] Resample(double[] input)
+        public float[] Resample(float[] input)
         {
-            double[] buffer = input;
+            float[] buffer = input;
             foreach (var stage in _stages)
                 buffer = stage.Resample(buffer);
             return buffer;

@@ -61,7 +61,7 @@
 
         public override TimeSpan CurrentTime
         {
-            get => TimeSpan.FromSeconds(Position * 8 / (_header.SamplingFrequency * _header.ChannelCount));
+            get => TimeSpan.FromSeconds(Position * 8 / (float)(_header.SamplingFrequency * _header.ChannelCount));
             set => Position = (long)(value.TotalSeconds * _header.SamplingFrequency * _header.ChannelCount / 8);
         }
 
@@ -94,7 +94,7 @@
             _stream = stream;
             _header = DsdHeader.GetHeader(_stream);
             _format = DsdFormatExtensions.FromSamplingFrequency(_header.SamplingFrequency);
-            _totalTime = TimeSpan.FromSeconds((_header.DataLength * 8) / (_header.SamplingFrequency * _header.ChannelCount));
+            _totalTime = TimeSpan.FromSeconds((_header.DataLength * 8) / (float)(_header.SamplingFrequency * _header.ChannelCount));
             _waveFormat = new WaveFormat(_header.SamplingFrequency, _header.BitsPerSample, _header.ChannelCount);
             IsLSBF = _header.IsLittleEndian;
             Position = 0;

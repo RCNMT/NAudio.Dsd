@@ -8,24 +8,24 @@
         /// <summary>
         /// Represents the DSD64 audio format, a high-resolution digital audio format with a sampling rate of 2.8224 MHz.
         /// </summary>
-        DSD64 = 0,
+        DSD64 = 2822400,
         /// <summary>
         /// Represents the DSD128 audio format, a high-resolution digital audio format with a sampling rate of 5.6448 MHz.
         /// </summary>
-        DSD128 = 1,
+        DSD128 = 5644800,
         /// <summary>
         /// Represents the DSD256 audio format, a high-resolution digital audio format with a sampling rate of 11.2896 MHz.
         /// </summary>
-        DSD256 = 2,
+        DSD256 = 11289600,
         /// <summary>
         /// Represents the DSD512 audio format, a high-resolution digital audio format with a sampling rate of 22.5792 MHz.
         /// </summary>
-        DSD512 = 3,
+        DSD512 = 22579200,
         /// <summary>
         /// Represents the DSD1024 audio format, a high-resolution digital audio format with a sampling rate of 45.1584 MHz.
         /// This format is less common and may not be supported by all hardware or software.
         /// </summary>
-        DSD1024 = 4
+        DSD1024 = 45158400
     }
 
     public static class DsdFormatExtensions
