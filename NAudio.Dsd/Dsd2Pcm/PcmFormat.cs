@@ -5,23 +5,44 @@
         /// <summary>
         /// Represents the PCM44.1 audio format, a standard digital audio format with a sampling rate of 44.1 kHz.
         /// </summary>
-        PCM44_1 = 1,
+        PCM44_1 = 44100,
         /// <summary>
         /// Represents the PCM88.2 audio format, a high-resolution digital audio format with a sampling rate of 88.2 kHz.
         /// </summary>
-        PCM88_2 = 2,
+        PCM88_2 = 88200,
         /// <summary>
         /// Represents the PCM176.4 audio format, a high-resolution digital audio format with a sampling rate of 176.4 kHz.
         /// </summary>
-        PCM176_4 = 4,
+        PCM176_4 = 176400,
         /// <summary>
         /// Represnts the PCM352.8 audio format, a high-resolution digital audio format with a sampling rate of 352.8 kHz.
         /// </summary>
-        PCM352_8 = 8,
+        PCM352_8 = 352800,
         /// <summary>
         /// Represents the PCM705.6 audio format, a high-resolution digital audio format with a sampling rate of 705.6 kHz.
         /// </summary>
-        PCM705_6 = 16,
+        PCM705_6 = 705600,
+
+        /// <summary>
+        /// Represents the PCM48 audio format, a standard digital audio format with a sampling rate of 48 kHz.
+        /// </summary>
+        PCM48 = 48000,
+        /// <summary>
+        /// Represents the PCM96 audio format, a high-resolution digital audio format with a sampling rate of 96 kHz.
+        /// </summary>
+        PCM96 = 90000,
+        /// <summary>
+        /// Represents the PCM192 audio format, a high-resolution digital audio format with a sampling rate of 192 kHz.
+        /// </summary>
+        PCM192 = 192000,
+        /// <summary>
+        /// Represents the PCM384 audio format, a high-resolution digital audio format with a sampling rate of 384 kHz.
+        /// </summary>
+        PCM384 = 384000,
+        /// <summary>
+        /// Represents the PCM768 audio format, a high-resolution digital audio format with a sampling rate of 768 kHz.
+        /// </summary>
+        PCM768 = 768000
     }
 
     public static class PcmFormatExtensions
@@ -34,15 +55,7 @@
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public static int GetSamplingFrequency(this PcmFormat format)
         {
-            return format switch
-            {
-                PcmFormat.PCM44_1 => 44100,
-                PcmFormat.PCM88_2 => 88200,
-                PcmFormat.PCM176_4 => 176400,
-                PcmFormat.PCM352_8 => 352800,
-                PcmFormat.PCM705_6 => 705600,
-                _ => throw new ArgumentOutOfRangeException(nameof(format), "Unsupported PCM format"),
-            };
+            return (int)format;
         }
     }
 }

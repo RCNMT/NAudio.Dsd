@@ -4,19 +4,28 @@
     {
         private readonly List<SampleFloat64Resampler> _stages = [];
 
-        public List<(int, int)> Steps { get; }
+        public List<(int, int)> ConversionSteps { get; }
+
+        public MultiStageResampler(List<(int, int)> conversionSteps)
+        {
+            ConversionSteps = conversionSteps;
+            foreach (var item in ConversionSteps)
+            {
+                _stages.Add(new SampleFloat64Resampler(item.Item1, item.Item2, 64 * 2, 1024));
+            }
+        }
 
         public MultiStageResampler(int inputRate, int outputRate)
         {
-            if (inputRate < 44100 || outputRate < 44100)
+            if (inputRate <= 0 || outputRate <= 0)
             {
                 throw new AggregateException("Invalid sample rates.");
             }
 
-            Steps = GetIntermediates(inputRate, outputRate);
-            foreach (var item in Steps)
+            ConversionSteps = GetIntermediates(inputRate, outputRate, 4);
+            foreach (var item in ConversionSteps)
             {
-                _stages.Add(new SampleFloat64Resampler(item.Item1, item.Item2, 64 * 2, 1024 * 2));
+                _stages.Add(new SampleFloat64Resampler(item.Item1, item.Item2, 64 * 2, 1024));
             }
         }
 
@@ -38,7 +47,7 @@
             return resamplers;
         }
 
-        public static List<(int, int)> GetIntermediates(int inputRate, int outputRate)
+        public static List<(int, int)> GetIntermediates(int inputRate, int outputRate, int stepFactor = 2)
         {
             List<(int, int)> intermediate = [];
             int max, min;
@@ -49,25 +58,25 @@
             {
                 if (downsampling)
                 {
-                    while (max != min)
+                    while (max >= min)
                     {
-                        intermediate.Add((max ,max /= 2));
+                        intermediate.Add((max, Math.Max(max /= stepFactor, min)));
                     }
                 }
                 else
                 {
-                    while (max != min)
+                    while (max >= min)
                     {
-                        intermediate.Add((min, min *= 2));
+                        intermediate.Add((min, Math.Min(min *= stepFactor, max)));
                     }
                 }
             }
             else
             {
                 int tmp = max % 44100 == 0 ? 44100 : 48000;
-                while (tmp < min) 
+                while (tmp < min)
                 {
-                    tmp *= 2;
+                    tmp *= stepFactor;
                 }
                 if (downsampling)
                 {
