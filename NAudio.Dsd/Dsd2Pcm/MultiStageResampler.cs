@@ -8,10 +8,10 @@
 
         public MultiStageResampler(List<(int, int)> conversionSteps)
         {
-            if (conversionSteps.Count <= 0)
-            {
-                throw new AggregateException("Invalid conversion steps");
-            }
+            //if (conversionSteps.Count <= 0)
+            //{
+            //    throw new AggregateException("Invalid conversion steps");
+            //}
 
             ConversionSteps = conversionSteps;
             foreach (var item in ConversionSteps)
@@ -46,6 +46,21 @@
             return buffer;
         }
 
+        public void Reset()
+        {
+            foreach (var stage in _stages) stage.Reset();
+        }
+
+        public static MultiStageResampler[] CreateMultiStageResamplers(List<(int, int)> conversionSteps, int channels)
+        {
+            MultiStageResampler[] resamplers = new MultiStageResampler[channels];
+            for (int i = 0; i < channels; ++i)
+            {
+                resamplers[i] = new MultiStageResampler(conversionSteps);
+            }
+            return resamplers;
+        }
+
         public static MultiStageResampler[] CreateMultiStageResamplers(int inputRate, int outputRate, int channels)
         {
             MultiStageResampler[] resamplers = new MultiStageResampler[channels];
@@ -54,6 +69,11 @@
                 resamplers[i] = new MultiStageResampler(inputRate, outputRate);
             }
             return resamplers;
+        }
+
+        public static void Reset(MultiStageResampler[] resamplers)
+        {
+            foreach (var item in resamplers) item.Reset();
         }
 
         public static List<(int, int)> GetIntermediates(int inputRate, int outputRate, int stepFactor = 2)

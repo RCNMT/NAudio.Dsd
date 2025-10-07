@@ -9,16 +9,10 @@
         private readonly object _obj = new();
         private readonly Stream _stream;
         private readonly DsdHeader _header;
-        private readonly DsdFormat _format;
 
         public DsdHeader Header
         {
             get => _header;
-        }
-
-        public DsdFormat Format
-        {
-            get => _format;
         }
 
         private readonly WaveFormat _waveFormat;
@@ -93,7 +87,6 @@
             _own = own;
             _stream = stream;
             _header = DsdHeader.GetHeader(_stream);
-            _format = DsdFormatExtensions.FromSamplingFrequency(_header.SamplingFrequency);
             _totalTime = TimeSpan.FromSeconds((_header.DataLength * 8) / (float)(_header.SamplingFrequency * _header.ChannelCount));
             _waveFormat = new WaveFormat(_header.SamplingFrequency, _header.BitsPerSample, _header.ChannelCount);
             IsLSBF = _header.IsLittleEndian;

@@ -2,17 +2,19 @@
 {
     public class SampleFloat32Resampler
     {
+        private readonly object _lock;
         private readonly float _ratio;                  // SourceRate / TargetRate
         private readonly int _filterLength;             // FIR length
         private readonly int _numPhases;                // Polyphase table size
         private readonly float[][] _filterBank;         // [phase][tap]
         private readonly List<float> _inputBuffer;
 
-        public SampleFloat32Resampler(int sourceRate, int targetRate, int filterLength = 64 * 2, int numPhases = 1024 * 2)
+        public SampleFloat32Resampler(int sourceRate, int targetRate, int filterLength = 64, int numPhases = 1024)
         {
             if (sourceRate <= 0 || targetRate <= 0)
                 throw new ArgumentException("Invalid sample rates.");
 
+            _lock = new object();
             _ratio = (float)sourceRate / targetRate;
             _filterLength = filterLength;   // Quality vs. speed trade-off
             _numPhases = numPhases;         // More phases = smoother fractional steps
@@ -24,40 +26,48 @@
 
         public float[] Resample(float[] inputSamples)
         {
-            _inputBuffer.AddRange(inputSamples);
-            int inputCount = _inputBuffer.Count;
-            int estimatedOutput = (int)MathF.Ceiling(inputCount / _ratio);
-            int outputIndex = 0;
-            float inputIndex = 0.0f;
-            float[] output = new float[estimatedOutput];
-
-            while (true)
+            lock (_lock)
             {
-                int baseIndex = (int)MathF.Floor(inputIndex);
-                if (baseIndex + _filterLength >= inputCount)
-                    break; // Not enough samples left to process
+                _inputBuffer.AddRange(inputSamples);
+                int inputCount = _inputBuffer.Count;
+                int estimatedOutput = (int)MathF.Ceiling(inputCount / _ratio);
+                int outputIndex = 0;
+                float inputIndex = 0.0f;
+                float[] output = new float[estimatedOutput];
 
-                float frac = inputIndex - baseIndex;
-                int phaseIndex = (int)(frac * _numPhases) % _numPhases;
-                float[] taps = _filterBank[phaseIndex];
-
-                float sum = 0f;
-                for (int i = 0; i < _filterLength; i++)
+                while (true)
                 {
-                    sum += _inputBuffer[baseIndex +i] * taps[i];
+                    int baseIndex = (int)MathF.Floor(inputIndex);
+                    if (baseIndex + _filterLength >= inputCount)
+                        break; // Not enough samples left to process
+
+                    float frac = inputIndex - baseIndex;
+                    int phaseIndex = (int)(frac * _numPhases) % _numPhases;
+                    float[] taps = _filterBank[phaseIndex];
+
+                    float sum = 0f;
+                    for (int i = 0; i < _filterLength; i++)
+                    {
+                        sum += _inputBuffer[baseIndex + i] * taps[i];
+                    }
+
+                    output[outputIndex++] = sum;
+                    inputIndex += _ratio;
                 }
 
-                output[outputIndex++] = sum;
-                inputIndex += _ratio;
+                // Remove processed samples from buffers
+                _inputBuffer.RemoveRange(0, Math.Min((int)Math.Floor(inputIndex), inputCount));
+
+                // Trim output to actual size
+                if (outputIndex < output.Length) Array.Resize(ref output, outputIndex);
+
+                return output;
             }
+        }
 
-            // Remove processed samples from buffers
-            _inputBuffer.RemoveRange(0, Math.Min((int)Math.Floor(inputIndex), inputCount));
-
-            // Trim output to actual size
-            if (outputIndex < output.Length) Array.Resize(ref output, outputIndex);
-
-            return output;
+        public void Reset()
+        {
+            lock (_lock) _inputBuffer.Clear();
         }
 
         private static float[][] BuildPolyphaseBank(int length, int phases, float cutoff)

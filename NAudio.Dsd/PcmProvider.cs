@@ -12,9 +12,11 @@ namespace NAudio.Dsd
         private readonly DsdReader _source;
         private readonly AutoResetEvent _readyEvent;
         private readonly Dsd2PcmConversion[] _conversions;
-        private readonly MultiStageResampler[] _resampler;
+        private readonly MultiStageResampler[] _resamplers;
         private readonly BufferedWaveProvider _buffered;
+        private readonly int _latency;
         private readonly int _frameSize;
+        private readonly int _bytesDelay;
         private readonly int _decimation;
         private readonly int _targetChannels;
         private readonly int _sourceChannels;
@@ -79,18 +81,15 @@ namespace NAudio.Dsd
 
         public List<string> ConversionSteps { get; } = [];
 
-        public PcmProvider(string path, WaveFormat format, int latency, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, float[]? coeff = null) :
+        public PcmProvider(string path, WaveFormat format, int latency = 300, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, float[]? coeff = null) :
             this(new DsdReader(path), format, latency, true, dither, filter, coeff)
         {
         }
 
-        public PcmProvider(DsdReader source, WaveFormat format, int latency, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, float[]? coeff = null) :
+        public PcmProvider(DsdReader source, WaveFormat format, int latency = 300, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, float[]? coeff = null) :
             this(source, format, latency, false, dither, filter, coeff)
         {
         }
-
-        readonly int _latency;
-        readonly int _bytesDelay;
 
         private PcmProvider(DsdReader source, WaveFormat format, int latency, bool own, DitherType dither, FilterType filter, float[]? coeff)
         {
@@ -118,12 +117,35 @@ namespace NAudio.Dsd
                 resampleRate *= 2;
             }
 
+            var stages = MultiStageResampler.GetIntermediates(resampleRate, targetRate, 2);
+            if (sourceRate / resampleRate > 64)
+            {
+                while (resampleRate > targetRate)
+                {
+                    resampleRate /= 2;
+                }
+                stages = MultiStageResampler.GetIntermediates(resampleRate, targetRate, 2);
+            }
+            else
+            {
+                if (stages.Count > 3) // lower resample target
+                {
+                    resampleRate /= 2;
+                    stages = MultiStageResampler.GetIntermediates(resampleRate, targetRate, 2);
+                }
+                if (stages.Count > 3) // switch from 2x to 4x conversions
+                {
+                    stages = MultiStageResampler.GetIntermediates(resampleRate, targetRate, 4);
+                }
+            }
+
+
             _own = own;
             _lock = new();
             _source = source;
             _frameSize = _source.Header.FrameSize;
             _readyEvent = new(false);
-            _decimation = _source.WaveFormat.SampleRate / resampleRate;
+            _decimation = sourceRate / resampleRate;
             _waveFormat = new WaveFormat(targetRate, bits, _targetChannels);
             _discardUntil = TimeSpan.Zero;
             _length = (long)(source.TotalTime.TotalSeconds * WaveFormat.AverageBytesPerSecond);
@@ -135,7 +157,7 @@ namespace NAudio.Dsd
                 BufferDuration = TimeSpan.FromSeconds(2),
             };
             _bytesDelay = _latency * (_buffered.WaveFormat.AverageBytesPerSecond / 1000);
-            _resampler = MultiStageResampler.CreateMultiStageResamplers(resampleRate, targetRate, _targetChannels);
+            _resamplers = MultiStageResampler.CreateMultiStageResamplers(stages, _targetChannels);
             _conversions = Dsd2PcmConversion.CreateConversions(_inCtx, _outCtx, coeff);
             _cts = new CancellationTokenSource();
             _token = _cts.Token;
@@ -143,13 +165,14 @@ namespace NAudio.Dsd
 
             ConversionSteps.Add($"DSD {sourceRate}Hz");
             ConversionSteps.Add($"PCM {resampleRate}Hz");
-            if (_resampler.Length > 0)
+            if (_resamplers.Length > 0)
             {
-                foreach (var item in _resampler[0].ConversionSteps)
+                foreach (var item in _resamplers[0].ConversionSteps)
                 {
                     ConversionSteps.Add($"PCM {item.Item2}Hz");
                 }
             }
+            Thread.Sleep(latency);
         }
 
         private void FillBuffer()
@@ -176,6 +199,7 @@ namespace NAudio.Dsd
                         {
                             _seekRequested = false;
                             Dsd2PcmConversion.Reset(_conversions);
+                            MultiStageResampler.Reset(_resamplers);
                             isDiscard = _source.CurrentTime < _discardUntil;
                             isClear = true;
                         }
@@ -187,8 +211,10 @@ namespace NAudio.Dsd
                     if (isDiscard)
                     {
                         for (int i = 0; i < sourceChannels; ++i) // Warmup filter
+                        {
                             _conversions[i].Translate(read / sourceChannels, dsdData, i * _inCtx.DsdChannelOffset, fltData);
-
+                            _ = _resamplers[i].Resample(fltData);
+                        }
                         isDiscard = _source.CurrentTime < _discardUntil;
                         continue;
                     }
@@ -196,7 +222,7 @@ namespace NAudio.Dsd
                     for (int i = 0; i < targetChannels; ++i)
                     {
                         _conversions[i].Translate(read / sourceChannels, dsdData, i * _inCtx.DsdChannelOffset, fltData);
-                        rspData = _resampler[i].Resample(fltData);
+                        rspData = _resamplers[i].Resample(fltData);
 
                         if (pcmData.Length != rspData.Length * targetChannels * bytesPerSample)
                         {
@@ -268,13 +294,8 @@ namespace NAudio.Dsd
         public override int Read(byte[] buffer, int offset, int count)
         {
             _readyEvent.Set();
-            while (_buffered.BufferedBytes < _bytesDelay)
-            {
-                Thread.Sleep(_latency);
-            }
             lock (_lock)
             {
-
                 int read = _buffered.Read(buffer, offset, count);
                 _position += read;
                 return read;
