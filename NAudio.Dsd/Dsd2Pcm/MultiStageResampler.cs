@@ -8,10 +8,17 @@
 
         public MultiStageResampler(List<(int, int)> conversionSteps)
         {
+            if (conversionSteps.Count <= 0)
+            {
+                throw new AggregateException("Invalid conversion steps");
+            }
+
             ConversionSteps = conversionSteps;
             foreach (var item in ConversionSteps)
             {
-                _stages.Add(new SampleFloat64Resampler(item.Item1, item.Item2, 64 * 2, 1024));
+                (int max, int min) = item.Item1 >= item.Item2 ? (item.Item1, item.Item2) : (item.Item2, item.Item1);
+                int n = 64 * Math.Max(1, (max / min) - 1);
+                _stages.Add(new SampleFloat64Resampler(item.Item1, item.Item2, n, 1024));
             }
         }
 
@@ -19,13 +26,15 @@
         {
             if (inputRate <= 0 || outputRate <= 0)
             {
-                throw new AggregateException("Invalid sample rates.");
+                throw new AggregateException("Invalid sample rates");
             }
 
-            ConversionSteps = GetIntermediates(inputRate, outputRate, 4);
+            ConversionSteps = GetIntermediates(inputRate, outputRate, 2);
             foreach (var item in ConversionSteps)
             {
-                _stages.Add(new SampleFloat64Resampler(item.Item1, item.Item2, 64 * 2, 1024));
+                (int max, int min) = item.Item1 >= item.Item2 ? (item.Item1, item.Item2) : (item.Item2, item.Item1);
+                int n = 64 * Math.Max(1, (max / min) - 1);
+                _stages.Add(new SampleFloat64Resampler(item.Item1, item.Item2, n, 1024));
             }
         }
 
@@ -49,6 +58,8 @@
 
         public static List<(int, int)> GetIntermediates(int inputRate, int outputRate, int stepFactor = 2)
         {
+            if (stepFactor < 2) stepFactor = 2;
+
             List<(int, int)> intermediate = [];
             int max, min;
             bool downsampling = inputRate >= outputRate;
@@ -58,14 +69,14 @@
             {
                 if (downsampling)
                 {
-                    while (max >= min)
+                    while (max > min)
                     {
                         intermediate.Add((max, Math.Max(max /= stepFactor, min)));
                     }
                 }
                 else
                 {
-                    while (max >= min)
+                    while (max > min)
                     {
                         intermediate.Add((min, Math.Min(min *= stepFactor, max)));
                     }
@@ -73,7 +84,7 @@
             }
             else
             {
-                int tmp = max % 44100 == 0 ? 44100 : 48000;
+                int tmp = max % 11025 == 0 ? 44100 : 48000;
                 while (tmp < min)
                 {
                     tmp *= stepFactor;
