@@ -8,11 +8,6 @@
 
         public MultiStageResampler(List<(int, int)> conversionSteps)
         {
-            //if (conversionSteps.Count <= 0)
-            //{
-            //    throw new AggregateException("Invalid conversion steps");
-            //}
-
             ConversionSteps = conversionSteps;
             foreach (var item in ConversionSteps)
             {
@@ -38,9 +33,9 @@
             }
         }
 
-        public float[] Resample(float[] input)
+        public double[] Resample(double[] input)
         {
-            float[] buffer = input;
+            double[] buffer = input;
             foreach (var stage in _stages)
                 buffer = stage.Resample(buffer);
             return buffer;

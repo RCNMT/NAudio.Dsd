@@ -42,7 +42,7 @@ namespace NAudio.Dsd
         public override long Position
         {
             get => _position;
-            set => CurrentTime = TimeSpan.FromSeconds(value / (float)WaveFormat.AverageBytesPerSecond);
+            set => CurrentTime = TimeSpan.FromSeconds(value / (double)WaveFormat.AverageBytesPerSecond);
         }
 
         public override TimeSpan TotalTime
@@ -52,12 +52,12 @@ namespace NAudio.Dsd
 
         public override TimeSpan CurrentTime
         {
-            get => TimeSpan.FromSeconds(_position / (float)WaveFormat.AverageBytesPerSecond);
+            get => TimeSpan.FromSeconds(_position / (double)WaveFormat.AverageBytesPerSecond);
             set
             {
                 lock (_lock)
                 {
-                    var warmupTime = TimeSpan.FromSeconds(_conversions[0].Size / (float)_source.WaveFormat.SampleRate);
+                    var warmupTime = TimeSpan.FromSeconds(_conversions[0].Size / (double)_source.WaveFormat.SampleRate);
                     var backtrack = warmupTime + TimeSpan.FromMilliseconds(10);
                     _discardUntil = value;
                     _seekRequested = true;
@@ -76,22 +76,22 @@ namespace NAudio.Dsd
 
         public TimeSpan BufferSize
         {
-            get => TimeSpan.FromMilliseconds(_buffered.BufferedBytes / (float)_buffered.WaveFormat.AverageBytesPerSecond * 1000.0);
+            get => TimeSpan.FromMilliseconds(_buffered.BufferedBytes / (double)_buffered.WaveFormat.AverageBytesPerSecond * 1000.0);
         }
 
         public List<string> ConversionSteps { get; } = [];
 
-        public PcmProvider(string path, WaveFormat format, int latency = 300, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, float[]? coeff = null) :
+        public PcmProvider(string path, WaveFormat format, int latency = 300, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, double[]? coeff = null) :
             this(new DsdReader(path), format, latency, true, dither, filter, coeff)
         {
         }
 
-        public PcmProvider(DsdReader source, WaveFormat format, int latency = 300, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, float[]? coeff = null) :
+        public PcmProvider(DsdReader source, WaveFormat format, int latency = 300, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, double[]? coeff = null) :
             this(source, format, latency, false, dither, filter, coeff)
         {
         }
 
-        private PcmProvider(DsdReader source, WaveFormat format, int latency, bool own, DitherType dither, FilterType filter, float[]? coeff)
+        private PcmProvider(DsdReader source, WaveFormat format, int latency, bool own, DitherType dither, FilterType filter, double[]? coeff)
         {
             if (format.Encoding != WaveFormatEncoding.Pcm)
             {
@@ -118,25 +118,15 @@ namespace NAudio.Dsd
             }
 
             var stages = MultiStageResampler.GetIntermediates(resampleRate, targetRate, 2);
-            if (sourceRate / resampleRate > 64)
+            
+            if (stages.Count > 3) // lower resample target
             {
-                while (resampleRate > targetRate)
-                {
-                    resampleRate /= 2;
-                }
+                resampleRate /= 2;
                 stages = MultiStageResampler.GetIntermediates(resampleRate, targetRate, 2);
             }
-            else
+            if (stages.Count > 3) // switch from 2x to 4x conversions
             {
-                if (stages.Count > 3) // lower resample target
-                {
-                    resampleRate /= 2;
-                    stages = MultiStageResampler.GetIntermediates(resampleRate, targetRate, 2);
-                }
-                if (stages.Count > 3) // switch from 2x to 4x conversions
-                {
-                    stages = MultiStageResampler.GetIntermediates(resampleRate, targetRate, 4);
-                }
+                stages = MultiStageResampler.GetIntermediates(resampleRate, targetRate, 4);
             }
 
 
@@ -186,8 +176,8 @@ namespace NAudio.Dsd
             bool isClear = false;
             byte[] dsdData = new byte[_frameSize];
             byte[] pcmData = [];
-            float[] fltData = new float[fltSize];
-            float[] rspData;
+            double[] fltData = new double[fltSize];
+            double[] rspData;
 
             try
             {
@@ -231,7 +221,7 @@ namespace NAudio.Dsd
 
                         for (int j = 0; j < rspData.Length; ++j)
                         {
-                            float sample = rspData[j];
+                            double sample = rspData[j];
                             sample = _dither.ApplyDither(sample);
 
                             int pos = j * targetChannels * bytesPerSample + i * bytesPerSample;

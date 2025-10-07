@@ -6,7 +6,7 @@
         public int FifoPosition;
         public bool IsLSBFirst;
         public byte[] Fifo = null!;
-        public float[][] Tables = null!;
+        public double[][] Tables = null!;
 
         public void Reset()
         {
