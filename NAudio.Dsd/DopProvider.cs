@@ -1,4 +1,6 @@
-﻿namespace NAudio.Dsd
+﻿using NAudio.Dsd.Utilities;
+
+namespace NAudio.Dsd
 {
     public class DopProvider : WaveStream, IDisposable
     {
@@ -6,11 +8,8 @@
         private const byte DOP_MARKER_FA = 0xFA;
 
         private readonly object _lock = new();
-        private delegate byte[] ConversionDelegate(byte[] dsdBuffer);
         private readonly bool _own;
-        private readonly int _ratio;
         private readonly int _frameSize;
-        private readonly ConversionDelegate _conversion;
         private readonly DsdReader _source;
         private readonly BufferedWaveProvider _buffered;
         private readonly AutoResetEvent _readyEvent = new(false);
@@ -65,21 +64,16 @@
             }
         }
 
-        /// <summary>
-        /// Creates a new DoP (DSD over PCM) provider from a DSD file path.
-        /// </summary>
-        /// <param name="path"></param>
-        /// <param name="ratio"></param>
-        public DopProvider(string path, int ratio = 1) : this(new DsdReader(path), true, ratio)
+        public TimeSpan BufferSize
         {
+            get => TimeSpan.FromMilliseconds(_buffered.BufferedBytes / _buffered.WaveFormat.AverageBytesPerSecond * 1000.0);
         }
 
         /// <summary>
-        /// Creates a new DoP (DSD over PCM) provider from a stream containing DSD data.
+        /// Creates a new DoP (DSD over PCM) provider from a DSD file path.
         /// </summary>
-        /// <param name="stream"></param>
-        /// <param name="ratio"></param>
-        public DopProvider(Stream stream, int ratio = 1) : this(new DsdReader(stream), false, ratio)
+        /// <param name="path">The path to the DSD file to read.</param>
+        public DopProvider(string path) : this(new DsdReader(path), true)
         {
         }
 
@@ -87,28 +81,19 @@
         /// Creates a new DoP (DSD over PCM) provider from an existing DsdReader instance.
         /// </summary>
         /// <param name="source">DsdReader instance to read DSD data from.</param>
-        /// <param name="ratio"></param>
-        public DopProvider(DsdReader source, int ratio = 1) : this(source, false, ratio)
+        public DopProvider(DsdReader source) : this(source, false)
         {
         }
 
-        private DopProvider(DsdReader source, bool own, int ratio)
+        private DopProvider(DsdReader source, bool own)
         {
+            int inputRate = source.WaveFormat.SampleRate;
             _own = own;
-            _ratio = ratio;
             _source = source ?? throw new ArgumentNullException(nameof(source));
-            _length = (long)(source.Length / _ratio * 1.5); // DoP is 1.5 times the size of DSD
+            
             _frameSize = _source.Header.FrameSize;
-            _waveFormat = new WaveFormat(_source.WaveFormat.SampleRate / (_ratio * 16), 24, _source.WaveFormat.Channels);
-            _conversion = ratio switch
-            {
-                1 => dsdBuffer => dsdBuffer, // No conversion needed
-                2 => DsdConversion.DSD2xToDSD1x_FIR2nd,
-                4 => DsdConversion.DSD4xToDSD1x_FIR2nd,
-                8 => DsdConversion.DSD8xToDSD1x_FIR2nd,
-                16 => DsdConversion.DSD16xToDSD1x,
-                _ => throw new ArgumentOutOfRangeException(nameof(ratio), "Ratio must be 1, 2, 4, 8, or 16")
-            };
+            _length = (long)(source.Length / 1.5); // DoP is 1.5 times the size of DSD
+            _waveFormat = new WaveFormat(_source.WaveFormat.SampleRate / 16, 24, _source.WaveFormat.Channels);
             _buffered = new BufferedWaveProvider(_waveFormat)
             {
                 BufferDuration = TimeSpan.FromSeconds(5),
@@ -119,7 +104,7 @@
 
         private void FillBuffer()
         {
-            byte[] buffer = new byte[_frameSize];
+            byte[] dsdBuffer = new byte[_frameSize];
             int channels = _source.Header.ChannelCount;
             bool isClear = false;
 
@@ -136,11 +121,10 @@
                         }
                     }
 
-                    int read = _source.Read(buffer, 0, _frameSize);
+                    int read = _source.Read(dsdBuffer, 0, _frameSize);
                     if (read == 0) break;
 
-                    byte[] dsdBuffer = _conversion(buffer);
-                    byte[] dopBuffer = DSDToDoP(dsdBuffer, channels, (read / _ratio) / channels);
+                    byte[] dopBuffer = DSDToDoP(dsdBuffer, channels, read / channels);
 
                     while (_buffered.BufferedBytes + dopBuffer.Length > _buffered.BufferLength)
                     {
@@ -218,10 +202,10 @@
 
                 if (isSourceLE)
                 {
-                    LMSB = ReverseByteWithLookup(LMSB);
-                    LLSB = ReverseByteWithLookup(LLSB);
-                    RMSB = ReverseByteWithLookup(RMSB);
-                    RLSB = ReverseByteWithLookup(RLSB);
+                    LMSB = LookupTable.BitReversal[LMSB];
+                    LLSB = LookupTable.BitReversal[LLSB];
+                    RMSB = LookupTable.BitReversal[RMSB];
+                    RLSB = LookupTable.BitReversal[RLSB];
                 }
 
                 if (isArchLE)
@@ -254,14 +238,6 @@
                 _source.Dispose();
             }
             base.Dispose(disposing);
-        }
-
-        public static readonly byte[] ReverseByteTable =
-            [.. Enumerable.Range(0, 256).Select(x => (byte)((x * 0x0202020202 & 0x010884422010) % 1023))];
-
-        public static byte ReverseByteWithLookup(byte b)
-        {
-            return ReverseByteTable[b];
         }
     }
 }
