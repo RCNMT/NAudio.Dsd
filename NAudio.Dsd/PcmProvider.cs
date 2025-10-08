@@ -1,4 +1,5 @@
 ﻿using NAudio.Dsd.Dsd2Pcm;
+using System.Diagnostics;
 
 namespace NAudio.Dsd
 {
@@ -14,9 +15,7 @@ namespace NAudio.Dsd
         private readonly Dsd2PcmConversion[] _conversions;
         private readonly MultiStageResampler[] _resamplers;
         private readonly BufferedWaveProvider _buffered;
-        private readonly int _latency;
         private readonly int _frameSize;
-        private readonly int _bytesDelay;
         private readonly int _decimation;
         private readonly int _targetChannels;
         private readonly int _sourceChannels;
@@ -24,7 +23,13 @@ namespace NAudio.Dsd
         private CancellationTokenSource _cts;
         private CancellationToken _token;
         private TimeSpan _discardUntil;
+        private Stopwatch? _delayTimer;
         private bool _seekRequested = false;
+        private bool _delayNeeded = true;
+        private int _delayMilliseconds;
+
+        private delegate void Float64ToInt(byte[] buffer, int position, double value);
+        private readonly Float64ToInt FloatToInt;
 
         private readonly WaveFormat _waveFormat;
         public override WaveFormat WaveFormat
@@ -81,24 +86,39 @@ namespace NAudio.Dsd
 
         public List<string> ConversionSteps { get; } = [];
 
-        public PcmProvider(string path, WaveFormat format, int latency = 300, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, double[]? coeff = null) :
-            this(new DsdReader(path), format, latency, true, dither, filter, coeff)
+        public int DelayMilliseconds
+        {
+            get { return _delayMilliseconds; }
+            set { _delayMilliseconds = Math.Max(value, _decimation * ConversionSteps.Count); }
+        }
+
+        public PcmProvider(string path, WaveFormat format, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, double[]? coeff = null) :
+            this(new DsdReader(path), format, true, dither, filter, coeff)
         {
         }
 
-        public PcmProvider(DsdReader source, WaveFormat format, int latency = 300, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, double[]? coeff = null) :
-            this(source, format, latency, false, dither, filter, coeff)
+        public PcmProvider(DsdReader source, WaveFormat format, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, double[]? coeff = null) :
+            this(source, format, false, dither, filter, coeff)
         {
         }
 
-        private PcmProvider(DsdReader source, WaveFormat format, int latency, bool own, DitherType dither, FilterType filter, double[]? coeff)
+        public PcmProvider(string path, WaveFormat format, DitherType dither = DitherType.TriangularPDF, double[]? coeff = null) :
+            this(new DsdReader(path), format, true, dither, FilterType.Custom, coeff: coeff)
+        {
+        }
+
+        public PcmProvider(DsdReader source, WaveFormat format, DitherType dither = DitherType.TriangularPDF, double[]? coeff = null) :
+            this(source, format, false, dither, FilterType.Custom, coeff: coeff)
+        {
+        }
+
+        private PcmProvider(DsdReader source, WaveFormat format, bool own, DitherType dither, FilterType filter, double[]? coeff)
         {
             if (format.Encoding != WaveFormatEncoding.Pcm)
             {
                 throw new ArgumentException("Must be PCM encoding");
             }
 
-            _latency = latency;
             _targetChannels = format.Channels;
             _sourceChannels = source.WaveFormat.Channels;
 
@@ -110,51 +130,53 @@ namespace NAudio.Dsd
             int bits = format.BitsPerSample;
             int targetRate = format.SampleRate;
             int sourceRate = source.WaveFormat.SampleRate;
-            int resampleRate = sourceRate % 11025 == 0 ? 44100 * 8 : 48000 * 8;
+            int outputRate = sourceRate % 11025 == 0 ? 44100 * 8 : 48000 * 8;
 
-            while (resampleRate < targetRate)
+            while (outputRate < targetRate)
             {
-                resampleRate *= 2;
+                outputRate *= 2;
             }
 
-            var stages = MultiStageResampler.GetIntermediates(resampleRate, targetRate, 2);
-            
-            if (stages.Count > 3) // lower resample target
-            {
-                resampleRate /= 2;
-                stages = MultiStageResampler.GetIntermediates(resampleRate, targetRate, 2);
-            }
-            if (stages.Count > 3) // switch from 2x to 4x conversions
-            {
-                stages = MultiStageResampler.GetIntermediates(resampleRate, targetRate, 4);
-            }
+            var stages = MultiStageResampler.GetIntermediates(outputRate, targetRate, 2);
 
+            while (stages.Count > 3) // lower Dsd2Pcm output
+            {
+                outputRate /= 2;
+                stages = MultiStageResampler.GetIntermediates(outputRate, targetRate, 2);
+            }
 
             _own = own;
             _lock = new();
             _source = source;
             _frameSize = _source.Header.FrameSize;
             _readyEvent = new(false);
-            _decimation = sourceRate / resampleRate;
+            _decimation = sourceRate / outputRate;
             _waveFormat = new WaveFormat(targetRate, bits, _targetChannels);
             _discardUntil = TimeSpan.Zero;
             _length = (long)(source.TotalTime.TotalSeconds * WaveFormat.AverageBytesPerSecond);
             _inCtx = new InputContext(_source.IsLSBF, sourceRate, _sourceChannels, _source.Header.BlockSizePerChannel, _source.Length, _source.Header.Interleaved);
-            _outCtx = new OutputContext(resampleRate, bits, _decimation, _inCtx.BlockSize, _inCtx.Channels, filter);
+            _outCtx = new OutputContext(outputRate, bits, _decimation, _inCtx.BlockSize, _inCtx.Channels, filter);
             _dither = new Dither(dither, bits);
             _buffered = new BufferedWaveProvider(_waveFormat)
             {
                 BufferDuration = TimeSpan.FromSeconds(2),
             };
-            _bytesDelay = _latency * (_buffered.WaveFormat.AverageBytesPerSecond / 1000);
             _resamplers = MultiStageResampler.CreateMultiStageResamplers(stages, _targetChannels);
             _conversions = Dsd2PcmConversion.CreateConversions(_inCtx, _outCtx, coeff);
+            FloatToInt = bits switch
+            {
+                16 => Float64ToInt16,
+                24 => Float64ToInt24,
+                32 => Float64ToInt32,
+                _ => throw new NotImplementedException(),
+            };
+
             _cts = new CancellationTokenSource();
             _token = _cts.Token;
             _fillBufferTask = Task.Run(FillBuffer);
 
             ConversionSteps.Add($"DSD {sourceRate}Hz");
-            ConversionSteps.Add($"PCM {resampleRate}Hz");
+            ConversionSteps.Add($"PCM {outputRate}Hz");
             if (_resamplers.Length > 0)
             {
                 foreach (var item in _resamplers[0].ConversionSteps)
@@ -162,7 +184,8 @@ namespace NAudio.Dsd
                     ConversionSteps.Add($"PCM {item.Item2}Hz");
                 }
             }
-            Thread.Sleep(latency);
+
+            _delayMilliseconds = _decimation * ConversionSteps.Count;
         }
 
         private void FillBuffer()
@@ -225,29 +248,7 @@ namespace NAudio.Dsd
                             sample = _dither.ApplyDither(sample);
 
                             int pos = j * targetChannels * bytesPerSample + i * bytesPerSample;
-                            if (bytesPerSample == 2)        // Float to 16-bit
-                            {
-                                short sample16 = (short)Math.Clamp(sample * 32767f, short.MinValue, short.MaxValue);
-                                byte[] bytes = BitConverter.GetBytes(sample16);
-                                pcmData[pos] = bytes[0];
-                                pcmData[pos + 1] = bytes[1];
-                            }
-                            else if (bytesPerSample == 3)   // Float to 24-bit
-                            {
-                                int sample24 = (int)Math.Clamp(sample * 8388607f, -8388608, 8388607);
-                                pcmData[pos] = (byte)(sample24 & 0xFF);
-                                pcmData[pos + 1] = (byte)((sample24 >> 8) & 0xFF);
-                                pcmData[pos + 2] = (byte)((sample24 >> 16) & 0xFF);
-                            }
-                            else if (bytesPerSample == 4)   // Float to 32-bit
-                            {
-                                int sample32 = (int)Math.Clamp(sample * 2147483647f, int.MinValue, int.MaxValue);
-                                byte[] bytes = BitConverter.GetBytes(sample32);
-                                pcmData[pos] = bytes[0];
-                                pcmData[pos + 1] = bytes[1];
-                                pcmData[pos + 2] = bytes[2];
-                                pcmData[pos + 3] = bytes[3];
-                            }
+                            FloatToInt(pcmData, pos, sample);
                         }
                     }
 
@@ -284,6 +285,18 @@ namespace NAudio.Dsd
         public override int Read(byte[] buffer, int offset, int count)
         {
             _readyEvent.Set();
+            if (_delayNeeded)
+            {
+                _delayTimer ??= Stopwatch.StartNew();
+                if (_delayMilliseconds <= _delayTimer.ElapsedMilliseconds)
+                {
+                    _delayNeeded = false;
+                    _delayTimer = null;
+                }
+
+                Array.Clear(buffer, offset, count);
+                return count;
+            }
             lock (_lock)
             {
                 int read = _buffered.Read(buffer, offset, count);
@@ -311,5 +324,33 @@ namespace NAudio.Dsd
             }
             base.Dispose(disposing);
         }
+
+        #region Float64ToInteger
+        private static void Float64ToInt16(byte[] buffer, int position, double value)
+        {
+            short sample16 = (short)Math.Clamp(value * 32767f, short.MinValue, short.MaxValue);
+            byte[] bytes = BitConverter.GetBytes(sample16);
+            buffer[position] = bytes[0];
+            buffer[position + 1] = bytes[1];
+        }
+
+        private static void Float64ToInt24(byte[] buffer, int position, double value)
+        {
+            int sample24 = (int)Math.Clamp(value * 8388607f, -8388608, 8388607);
+            buffer[position] = (byte)(sample24 & 0xFF);
+            buffer[position + 1] = (byte)((sample24 >> 8) & 0xFF);
+            buffer[position + 2] = (byte)((sample24 >> 16) & 0xFF);
+        }
+
+        private static void Float64ToInt32(byte[] buffer, int position, double value)
+        {
+            int sample32 = (int)Math.Clamp(value * 2147483647f, int.MinValue, int.MaxValue);
+            byte[] bytes = BitConverter.GetBytes(sample32);
+            buffer[position] = bytes[0];
+            buffer[position + 1] = bytes[1];
+            buffer[position + 2] = bytes[2];
+            buffer[position + 3] = bytes[3];
+        }
+        #endregion
     }
 }

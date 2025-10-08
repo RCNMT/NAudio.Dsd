@@ -1,6 +1,6 @@
 ﻿namespace NAudio.Dsd.Dsd2Pcm
 {
-    public class SampleFloat32Resampler
+    public class SampleFloat64Resampler
     {
         private readonly object _lock;
         private readonly double _ratio;                  // SourceRate / TargetRate
@@ -9,7 +9,7 @@
         private readonly double[][] _filterBank;         // [phase][tap]
         private readonly List<double> _inputBuffer;
 
-        public SampleFloat32Resampler(int sourceRate, int targetRate, int filterLength = 64, int numPhases = 1024)
+        public SampleFloat64Resampler(int sourceRate, int targetRate, int filterLength = 64, int numPhases = 1024)
         {
             if (sourceRate <= 0 || targetRate <= 0)
                 throw new ArgumentException("Invalid sample rates.");
