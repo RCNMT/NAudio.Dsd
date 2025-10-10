@@ -19,7 +19,7 @@ namespace NAudio.Dsd.Sample
 
             int dsdSampleRate = dsd.Header.SamplingFrequency;
             int dopSampleRate = dop.WaveFormat.SampleRate;
-            string inputName = DsdFormatExtensions.FromSamplingFrequency(dsdSampleRate).ToFriendlyString();
+            string inputName = $"DSD{(dsdSampleRate % 44100 == 0 ? dsdSampleRate / 44100 : dsdSampleRate / 48000)}";
 
             Console.WriteLine($"DSD Sample Rate: {dsdSampleRate} Hz ({inputName})");
             Console.WriteLine($"DoP Sample Rate: {dopSampleRate} Hz");
@@ -29,29 +29,29 @@ namespace NAudio.Dsd.Sample
             int l = Console.CursorLeft;
             bool seeking = false;
             Stopwatch stopwatch = Stopwatch.StartNew();
-            TimeSpan time = TimeSpan.FromSeconds(10);
-            TimeSpan target = TimeSpan.FromSeconds(60 * 3); // 3 minutes
+            TimeSpan from = TimeSpan.FromSeconds(10);
+            TimeSpan to = TimeSpan.FromSeconds(60 * 3);
 
             while (wasapi.PlaybackState == PlaybackState.Playing)
             {
                 // This if condition is for demonstration purposes.
                 // Set seeking to true to enable seeking.
                 // Seek to target after 10 seconds.
-                if (seeking && stopwatch.Elapsed > time)
+                if (seeking && dop.CurrentTime > from)
                 {
-                    dop.CurrentTime = target;
+                    dop.CurrentTime = to;
                     seeking = false;
                 }
 
                 Console.SetCursorPosition(l, t);
-                Console.WriteLine($"Stopwatch: {stopwatch.Elapsed:m\\:ss}");
-                Console.WriteLine($"Buffer Size: {dop.BufferSize.TotalMilliseconds} ms");
-                Console.WriteLine($"DSD Time: {dsd.CurrentTime:m\\:ss} / {dsd.TotalTime:m\\:ss}");
-                Console.WriteLine($"DoP Time: {dop.CurrentTime:m\\:ss} / {dop.TotalTime:m\\:ss}");
+                Console.WriteLine($"Stopwatch: {stopwatch.Elapsed:m\\:ss\\.ff}");
+                Console.WriteLine($"Buffer Size: {dop.BufferSize.TotalMilliseconds:0.00} ms");
+                Console.WriteLine($"DSD Time: {dsd.CurrentTime:m\\:ss\\.ff} / {dsd.TotalTime:m\\:ss\\.ff}");
+                Console.WriteLine($"PCM Time: {dop.CurrentTime:m\\:ss\\.ff} / {dop.TotalTime:m\\:ss\\.ff}");
                 Console.WriteLine();
                 Console.WriteLine($"DSD Position: {dsd.Position} / {dsd.Length}");
                 Console.WriteLine($"DoP Position: {dop.Position} / {dop.Length}");
-                Thread.Sleep(200);
+                Thread.Sleep(50);
             }
         }
     }
