@@ -7,7 +7,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		
-		<Version>2.0.0</Version>
+		<Version>2.1.0</Version>
 		<Authors>Rachanon Montree</Authors>
 		<SignAssembly>true</SignAssembly>
 		<Description>A DSD library for NAudio.</Description>
@@ -17,7 +17,7 @@
 		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageReleaseNotes>
-			# Version 2.0.0
+			# Version 2.1.0
 
 			## Breaking Changes
 			- Removed `PcmFormat` and use `WaveFormat` instead
