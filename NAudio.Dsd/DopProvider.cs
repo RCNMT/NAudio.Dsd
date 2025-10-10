@@ -73,6 +73,15 @@ namespace NAudio.Dsd
         }
 
         /// <summary>
+        /// The maximum amount of audio data that buffer can hold as a TimeSpan (default: 5 seconds)
+        /// </summary>
+        public TimeSpan BufferDuration
+        {
+            get => _buffered.BufferDuration;
+            set => _buffered.BufferDuration = value;
+        }
+
+        /// <summary>
         /// Creates a new DoP (DSD over PCM) provider from a DSD file path.
         /// </summary>
         /// <param name="path">The path to the DSD file to read.</param>
@@ -97,10 +106,7 @@ namespace NAudio.Dsd
             _frameSize = _source.Header.FrameSize;
             _length = (long)(source.Length / 1.5f); // DoP is 1.5 times the size of DSD
             _waveFormat = new WaveFormat(_source.WaveFormat.SampleRate / 16, 24, _source.WaveFormat.Channels);
-            _buffered = new BufferedWaveProvider(_waveFormat)
-            {
-                BufferDuration = TimeSpan.FromSeconds(5),
-            };
+            _buffered = new BufferedWaveProvider(_waveFormat);
             _token = _cts.Token;
             _fillBufferTask = Task.Run(FillBuffer);
         }

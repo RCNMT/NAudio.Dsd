@@ -60,13 +60,24 @@
         /// Resample to target sample rate
         /// </summary>
         /// <param name="inputSamples">Input samples</param>
-        /// <returns>A array of output samples</returns>
-        public double[] Resample(double[] inputSamples)
+        /// <param name="outputSamples">Output samples</param>
+        public void Resample(double[] inputSamples, ref double[] outputSamples)
         {
-            double[] buffer = inputSamples;
-            foreach (var stage in _stages)
-                buffer = stage.Resample(buffer);
-            return buffer;
+            if (_stages.Count == 0)
+            {
+                outputSamples = inputSamples;
+            }
+            else
+            {
+                for (int i = 0; i < _stages.Count; i++)
+                {
+                    SampleFloat64Resampler? stage = _stages[i];
+                    if (i != _stages.Count - 1)
+                        stage.Resample(inputSamples, ref inputSamples);
+                    else
+                        stage.Resample(inputSamples, ref outputSamples);
+                }
+            }
         }
 
         /// <summary>

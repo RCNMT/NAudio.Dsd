@@ -36,8 +36,8 @@
         /// Resample to target sample rate
         /// </summary>
         /// <param name="inputSamples">Input samples</param>
-        /// <returns>A array of output samples</returns>
-        public double[] Resample(double[] inputSamples)
+        /// <param name="outputSamples">Output samples</param>
+        public void Resample(double[] inputSamples, ref double[] outputSamples)
         {
             lock (_lock)
             {
@@ -46,7 +46,10 @@
                 int estimatedOutput = (int)Math.Ceiling(inputCount / _ratio);
                 int outputIndex = 0;
                 double inputIndex = 0.0f;
-                double[] output = new double[estimatedOutput];
+                if (outputSamples.Length != estimatedOutput)
+                {
+                    Array.Resize(ref outputSamples, estimatedOutput);
+                }
 
                 while (true)
                 {
@@ -64,7 +67,7 @@
                         sum += _inputBuffer[baseIndex + i] * taps[i];
                     }
 
-                    output[outputIndex++] = sum;
+                    outputSamples[outputIndex++] = sum;
                     inputIndex += _ratio;
                 }
 
@@ -72,9 +75,7 @@
                 _inputBuffer.RemoveRange(0, Math.Min((int)Math.Floor(inputIndex), inputCount));
 
                 // Trim output to actual size
-                if (outputIndex < output.Length) Array.Resize(ref output, outputIndex);
-
-                return output;
+                if (outputIndex < outputSamples.Length) Array.Resize(ref outputSamples, outputIndex);
             }
         }
 

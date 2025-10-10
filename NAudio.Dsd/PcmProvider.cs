@@ -88,6 +88,20 @@ namespace NAudio.Dsd
         }
 
         /// <summary>
+        /// The maximum amount of audio data that buffer can hold as a TimeSpan (default: 5 seconds)
+        /// </summary>
+        public TimeSpan BufferDuration
+        {
+            get => _buffered.BufferDuration;
+            set => _buffered.BufferDuration = value;
+        }
+
+        /// <summary>
+        /// The maximum stages for conversion
+        /// </summary>
+        public int MaxConversionStep { get; }
+
+        /// <summary>
         /// List of conversion steps from soure to output
         /// </summary>
         public List<string> ConversionSteps { get; } = [];
@@ -106,10 +120,11 @@ namespace NAudio.Dsd
         /// </summary>
         /// <param name="path">The path to the DSD file to read.</param>
         /// <param name="format">Target format</param>
-        /// <param name="dither">Dither type</param>
-        /// <param name="filter">Filter type</param>
-        public PcmProvider(string path, WaveFormat format, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser) :
-            this(new DsdReader(path), format, true, dither, filter, null)
+        /// <param name="dither">Dither type (default: TriangularPDF)</param>
+        /// <param name="filter">Filter type (default: Kaiser)</param>
+        /// <param name="maxConversionStep">Max conversion step (default: 4)</param>
+        public PcmProvider(string path, WaveFormat format, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, int maxConversionStep = 4) :
+            this(new DsdReader(path), format, maxConversionStep, true, dither, filter, null)
         {
         }
 
@@ -118,10 +133,11 @@ namespace NAudio.Dsd
         /// </summary>
         /// <param name="source">DSD source from <see cref="DsdHeader"/></param>
         /// <param name="format">Target format</param>
-        /// <param name="dither">Dither type</param>
-        /// <param name="filter">Filter type</param>
-        public PcmProvider(DsdReader source, WaveFormat format, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser) :
-            this(source, format, false, dither, filter, null)
+        /// <param name="dither">Dither type (default: TriangularPDF)</param>
+        /// <param name="filter">Filter type (default: Kaiser)</param>
+        /// <param name="maxConversionStep">Max conversion step (default: 4)</param>
+        public PcmProvider(DsdReader source, WaveFormat format, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, int maxConversionStep = 4) :
+            this(source, format, maxConversionStep, false, dither, filter, null)
         {
         }
 
@@ -130,10 +146,11 @@ namespace NAudio.Dsd
         /// </summary>
         /// <param name="path">The path to the DSD file to read.</param>
         /// <param name="format">Target format</param>
-        /// <param name="dither">Dither type</param>
         /// <param name="coeff">A array of FIR low-pass filter coefficients</param>
-        public PcmProvider(string path, WaveFormat format, DitherType dither = DitherType.TriangularPDF, double[]? coeff = null) :
-            this(new DsdReader(path), format, true, dither, FilterType.Custom, coeff: coeff)
+        /// <param name="dither">Dither type (default: TriangularPDF)</param>
+        /// <param name="maxConversionStep">Max conversion step (default: 4)</param>
+        public PcmProvider(string path, WaveFormat format, double[] coeff, DitherType dither = DitherType.TriangularPDF, int maxConversionStep = 4) :
+            this(new DsdReader(path), format, maxConversionStep, true, dither, FilterType.Custom, coeff: coeff)
         {
         }
 
@@ -142,14 +159,15 @@ namespace NAudio.Dsd
         /// </summary>
         /// <param name="source">DSD source from <see cref="DsdHeader"/></param>
         /// <param name="format">Target format</param>
-        /// <param name="dither">Dither type</param>
         /// <param name="coeff">A array of FIR low-pass filter coefficients</param>
-        public PcmProvider(DsdReader source, WaveFormat format, DitherType dither = DitherType.TriangularPDF, double[]? coeff = null) :
-            this(source, format, false, dither, FilterType.Custom, coeff: coeff)
+        /// <param name="dither">Dither type (default: TriangularPDF)</param>
+        /// <param name="maxConversionStep">Max conversion step (default: 4)</param>
+        public PcmProvider(DsdReader source, WaveFormat format, double[] coeff, DitherType dither = DitherType.TriangularPDF, int maxConversionStep = 4) :
+            this(source, format, maxConversionStep, false, dither, FilterType.Custom, coeff: coeff)
         {
         }
 
-        private PcmProvider(DsdReader source, WaveFormat format, bool own, DitherType dither, FilterType filter, double[]? coeff)
+        private PcmProvider(DsdReader source, WaveFormat format, int maxConversionStep, bool own, DitherType dither, FilterType filter, double[]? coeff)
         {
             _targetChannels = format.Channels;
             _sourceChannels = source.WaveFormat.Channels;
@@ -158,11 +176,13 @@ namespace NAudio.Dsd
                 throw new ArgumentException("Must be PCM encoding");
             if (_targetChannels > _sourceChannels)
                 throw new ArgumentException("Target channels cannot be greater than source channels");
+            if (maxConversionStep < 1)
+                maxConversionStep = 1;
 
             int bits = format.BitsPerSample;
             int targetRate = format.SampleRate;
             int sourceRate = source.WaveFormat.SampleRate;
-            int outputRate = sourceRate % 11025 == 0 ? 44100 * 8 : 48000 * 8;
+            int outputRate = sourceRate % 11025 == 0 ? 44100 * 16 : 48000 * 16;
 
             while (outputRate < targetRate)
             {
@@ -171,7 +191,7 @@ namespace NAudio.Dsd
 
             var stages = MultiStageResampler.GetIntermediates(outputRate, targetRate, 2);
 
-            while (stages.Count > 3) // lower Dsd2Pcm output due to performance issues
+            while (stages.Count > maxConversionStep - 1) // lower Dsd2Pcm output due to performance issues
             {
                 outputRate /= 2;
                 stages = MultiStageResampler.GetIntermediates(outputRate, targetRate, 2);
@@ -189,12 +209,10 @@ namespace NAudio.Dsd
             _inCtx = new InputContext(_source.IsLSBF, sourceRate, _sourceChannels, _source.Header.BlockSizePerChannel, _source.Length, _source.Header.Interleaved);
             _outCtx = new OutputContext(outputRate, bits, _decimation, _inCtx.BlockSize, _inCtx.Channels, filter);
             _dither = new Dither(dither, bits);
-            _buffered = new BufferedWaveProvider(_waveFormat)
-            {
-                BufferDuration = TimeSpan.FromSeconds(2),
-            };
+            _buffered = new BufferedWaveProvider(_waveFormat);
             _resamplers = MultiStageResampler.CreateMultiStageResamplers(stages, _targetChannels);
             _conversions = Dsd2PcmConversion.CreateConversions(_inCtx, _outCtx, coeff);
+            MaxConversionStep = maxConversionStep;
             FloatToInt = bits switch
             {
                 16 => Float64ToInt16,
@@ -213,7 +231,8 @@ namespace NAudio.Dsd
                 foreach (var item in _resamplers[0].ConversionSteps)
                     ConversionSteps.Add($"PCM {item.Item2}Hz");
 
-            _delayMilliseconds = _decimation * ConversionSteps.Count;
+
+            _delayMilliseconds = sourceRate / Math.Min(targetRate, 44100 * 2 * 2) * (ConversionSteps.Count - 1);
         }
 
         private void FillBuffer()
@@ -228,7 +247,7 @@ namespace NAudio.Dsd
             byte[] dsdData = new byte[_frameSize];
             byte[] pcmData = [];
             double[] fltData = new double[fltSize];
-            double[] rspData;
+            double[] rspData = [];
 
             try
             {
@@ -254,7 +273,7 @@ namespace NAudio.Dsd
                         for (int i = 0; i < sourceChannels; ++i) // Warmup filter
                         {
                             _conversions[i].Translate(read / sourceChannels, dsdData, i * _inCtx.DsdChannelOffset, fltData);
-                            _ = _resamplers[i].Resample(fltData);
+                            _resamplers[i].Resample(fltData, ref rspData);
                         }
                         isDiscard = _source.CurrentTime < _discardUntil;
                         continue;
@@ -263,7 +282,7 @@ namespace NAudio.Dsd
                     for (int i = 0; i < targetChannels; ++i)
                     {
                         _conversions[i].Translate(read / sourceChannels, dsdData, i * _inCtx.DsdChannelOffset, fltData);
-                        rspData = _resamplers[i].Resample(fltData);
+                        _resamplers[i].Resample(fltData, ref rspData);
 
                         if (pcmData.Length != rspData.Length * targetChannels * bytesPerSample)
                         {
