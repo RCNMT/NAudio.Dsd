@@ -14,6 +14,7 @@
         /// </summary>
         /// <param name="dsd2x">DSD audio data byte array. must be in DSD128, DSD256, DSD512, or DSD1024 format.</param>
         /// <returns>Byte array containing the downsampled DSD1x audio data. The length of the output array is half the length of the input byte array.</returns>
+        [Obsolete("This method is deprecated due to quality issue.")]
         public static unsafe byte[] DSD2xToDSD1x_FIR2nd(byte[] dsd2x)
         {
             byte[] dsd1x = new byte[dsd2x.Length / 2];
@@ -79,6 +80,7 @@
         /// </summary>
         /// <param name="dsd4x">DSD audio data byte array. must be in DSD256, DSD512, or DSD1024 format.</param>
         /// <returns>Byte array containing the downsampled DSD1x audio data. The length of the output array is one-fourth the length of the input byte array.</returns>
+        [Obsolete("This method is deprecated due to quality issue.")]
         public static unsafe byte[] DSD4xToDSD1x_FIR2nd(byte[] dsd4x)
         {
             byte[] dsd1x = new byte[dsd4x.Length / 4];
@@ -145,6 +147,7 @@
         /// </summary>
         /// <param name="dsd8x">DSD audio data byte array. must be in DSD512 or DSD1024 format.</param>
         /// <returns>Byte array containing the downsampled DSD1x audio data. The length of the output array is one-eighth the length of the input byte array.</returns>
+        [Obsolete("This method is deprecated due to performance and quality issues.")]
         public static unsafe byte[] DSD8xToDSD1x_FIR2nd(byte[] dsd8x)
         {
             byte[] dsd1x = new byte[dsd8x.Length / 8];
@@ -214,7 +217,7 @@
         /// </summary>
         /// <param name="dsd16x">DSD audio data byte array. must be in DSD1024 format.</param>
         /// <returns>Byte array containing the downsampled DSD1x audio data. The length of the output array is one-sixteenth the length of the input byte array.</returns>
-        [Obsolete("This method is deprecated. Use DSD16xToDSD1x_FIR4th instead for better performance and quality.")]
+        [Obsolete("This method is deprecated due to performance and quality issues.")]
         public static byte[] DSD16xToDSD1x(byte[] dsd16x)
         {
             return DSD2xToDSD1x_FIR2nd(DSD8xToDSD1x_FIR2nd(dsd16x));
