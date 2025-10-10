@@ -20,17 +20,22 @@
 			# Version 2.0.0
 
 			## Breaking Changes
+			- Removed `PcmFormat` and use `WaveFormat` instead
+			- Removed `DsdFormat` and handle by sample rate instead
+			- Removed `DsdFormat` property from `DsdReader`
 			- Removed `ratio` parameter from `DopProvider` constructor
 			- Removed automatic DSD conversion functionality from `DopProvider`
+			- Removed `Htaps` static filter
+			- Replaced `PcmFormat` and `bits` with `WaveFormat` in `PcmProvider` parameters
+			- Added `maxConversionStep` parameter to `PcmProvider` constructor
 
 			## What's New
-			- `DopProvider` now directly encapsulates DSD to DoP from source data
-			- Simplified API surface by removing conversion overhead
-			- Better performance for direct DoP operations
+			- Added new `SampleFloat64Resampler` class to resample PCM-64bit float
+			- Added new `MultiStageResampler` class to multi-stage resample
 
-			## Migration Guide
-			- Update your code to remove the `ratio` parameter from `DopProvider` calls.
-			- DSD conversion must now be handled separately if needed.
+			## Bug Fixes
+			- Fixed `DsdReader` stream position does not reach the audio data length
+			- Fixed `DsdHeader` incorrect data when read DSDIFF header
 		</PackageReleaseNotes>
 		<Copyright>© 2025 Rachanon Montree. All rights reserved.</Copyright>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
