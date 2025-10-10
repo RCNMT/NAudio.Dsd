@@ -64,6 +64,9 @@ namespace NAudio.Dsd
             }
         }
 
+        /// <summary>
+        /// Current size of buffer
+        /// </summary>
         public TimeSpan BufferSize
         {
             get => TimeSpan.FromMilliseconds(_buffered.BufferedBytes / (float)_buffered.WaveFormat.AverageBytesPerSecond * 1000.0f);
@@ -90,7 +93,7 @@ namespace NAudio.Dsd
             int inputRate = source.WaveFormat.SampleRate;
             _own = own;
             _source = source ?? throw new ArgumentNullException(nameof(source));
-            
+
             _frameSize = _source.Header.FrameSize;
             _length = (long)(source.Length / 1.5f); // DoP is 1.5 times the size of DSD
             _waveFormat = new WaveFormat(_source.WaveFormat.SampleRate / 16, 24, _source.WaveFormat.Channels);

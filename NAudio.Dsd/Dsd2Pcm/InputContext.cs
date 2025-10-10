@@ -20,11 +20,6 @@
             DataLength = length;
             SampleRate = sampleRate;
             Interleaved = interleaved;
-            SetBlockSize(blockSize);
-        }
-
-        public void SetBlockSize(int blockSize)
-        {
             BlockSize = blockSize;
             DsdChannelOffset = Interleaved ? 1 : BlockSize;
             DsdStride = Interleaved ? Channels : 1;

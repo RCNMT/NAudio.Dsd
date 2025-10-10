@@ -10,6 +10,9 @@
         private readonly Stream _stream;
         private readonly DsdHeader _header;
 
+        /// <summary>
+        /// DSD header data
+        /// </summary>
         public DsdHeader Header
         {
             get => _header;
@@ -59,6 +62,9 @@
             set => Position = (long)(value.TotalSeconds * _header.SamplingFrequency * _header.ChannelCount / 8);
         }
 
+        /// <summary>
+        /// Indicates the "endianness" of the audio data.
+        /// </summary>
         public bool IsLSBF { get; }
 
         /// <summary>

@@ -12,6 +12,8 @@
         public int BytesPerSample;
         public FilterType FilterType;
 
+        public OutputContext() { }
+
         public OutputContext(int rate, int bits, int decimation, int blockSize, int channels, FilterType filterType)
         {
             Bits = bits;

@@ -8,6 +8,9 @@
         public byte[] Fifo = null!;
         public double[][] Tables = null!;
 
+        /// <summary>
+        /// Reset all inner current buffers and buffer position
+        /// </summary>
         public void Reset()
         {
             Array.Clear(Fifo, 0, Fifo.Length);

@@ -79,34 +79,71 @@ namespace NAudio.Dsd
             }
         }
 
+        /// <summary>
+        /// Current size of buffer
+        /// </summary>
         public TimeSpan BufferSize
         {
             get => TimeSpan.FromMilliseconds(_buffered.BufferedBytes / (double)_buffered.WaveFormat.AverageBytesPerSecond * 1000.0);
         }
 
+        /// <summary>
+        /// List of conversion steps from soure to output
+        /// </summary>
         public List<string> ConversionSteps { get; } = [];
 
+        /// <summary>
+        /// Delay of output in milliseconds, Must set before <see cref="Read(byte[], int, int)">Read</see> was call
+        /// </summary>
         public int DelayMilliseconds
         {
             get { return _delayMilliseconds; }
-            set { _delayMilliseconds = Math.Max(value, _decimation * ConversionSteps.Count); }
+            set { _delayMilliseconds = value; }
         }
 
-        public PcmProvider(string path, WaveFormat format, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, double[]? coeff = null) :
-            this(new DsdReader(path), format, true, dither, filter, coeff)
+        /// <summary>
+        /// Initializes a new PCM provider for converting DSD to PCM
+        /// </summary>
+        /// <param name="path">The path to the DSD file to read.</param>
+        /// <param name="format">Target format</param>
+        /// <param name="dither">Dither type</param>
+        /// <param name="filter">Filter type</param>
+        public PcmProvider(string path, WaveFormat format, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser) :
+            this(new DsdReader(path), format, true, dither, filter, null)
         {
         }
 
-        public PcmProvider(DsdReader source, WaveFormat format, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser, double[]? coeff = null) :
-            this(source, format, false, dither, filter, coeff)
+        /// <summary>
+        /// Initializes a new PCM provider for converting DSD to PCM
+        /// </summary>
+        /// <param name="source">DSD source from <see cref="DsdHeader"/></param>
+        /// <param name="format">Target format</param>
+        /// <param name="dither">Dither type</param>
+        /// <param name="filter">Filter type</param>
+        public PcmProvider(DsdReader source, WaveFormat format, DitherType dither = DitherType.TriangularPDF, FilterType filter = FilterType.Kaiser) :
+            this(source, format, false, dither, filter, null)
         {
         }
 
+        /// <summary>
+        /// Initializes a new PCM provider for converting DSD to PCM
+        /// </summary>
+        /// <param name="path">The path to the DSD file to read.</param>
+        /// <param name="format">Target format</param>
+        /// <param name="dither">Dither type</param>
+        /// <param name="coeff">A array of FIR low-pass filter coefficients</param>
         public PcmProvider(string path, WaveFormat format, DitherType dither = DitherType.TriangularPDF, double[]? coeff = null) :
             this(new DsdReader(path), format, true, dither, FilterType.Custom, coeff: coeff)
         {
         }
 
+        /// <summary>
+        /// Initializes a new PCM provider for converting DSD to PCM
+        /// </summary>
+        /// <param name="source">DSD source from <see cref="DsdHeader"/></param>
+        /// <param name="format">Target format</param>
+        /// <param name="dither">Dither type</param>
+        /// <param name="coeff">A array of FIR low-pass filter coefficients</param>
         public PcmProvider(DsdReader source, WaveFormat format, DitherType dither = DitherType.TriangularPDF, double[]? coeff = null) :
             this(source, format, false, dither, FilterType.Custom, coeff: coeff)
         {
@@ -114,18 +151,13 @@ namespace NAudio.Dsd
 
         private PcmProvider(DsdReader source, WaveFormat format, bool own, DitherType dither, FilterType filter, double[]? coeff)
         {
-            if (format.Encoding != WaveFormatEncoding.Pcm)
-            {
-                throw new ArgumentException("Must be PCM encoding");
-            }
-
             _targetChannels = format.Channels;
             _sourceChannels = source.WaveFormat.Channels;
 
+            if (format.Encoding != WaveFormatEncoding.Pcm)
+                throw new ArgumentException("Must be PCM encoding");
             if (_targetChannels > _sourceChannels)
-            {
                 throw new ArgumentException("Target channels cannot be greater than source channels");
-            }
 
             int bits = format.BitsPerSample;
             int targetRate = format.SampleRate;
@@ -139,7 +171,7 @@ namespace NAudio.Dsd
 
             var stages = MultiStageResampler.GetIntermediates(outputRate, targetRate, 2);
 
-            while (stages.Count > 3) // lower Dsd2Pcm output
+            while (stages.Count > 3) // lower Dsd2Pcm output due to performance issues
             {
                 outputRate /= 2;
                 stages = MultiStageResampler.GetIntermediates(outputRate, targetRate, 2);
@@ -168,7 +200,7 @@ namespace NAudio.Dsd
                 16 => Float64ToInt16,
                 24 => Float64ToInt24,
                 32 => Float64ToInt32,
-                _ => throw new NotImplementedException(),
+                _ => throw new NotSupportedException($"Not supported: BitsPerSample {bits}"),
             };
 
             _cts = new CancellationTokenSource();
@@ -178,12 +210,8 @@ namespace NAudio.Dsd
             ConversionSteps.Add($"DSD {sourceRate}Hz");
             ConversionSteps.Add($"PCM {outputRate}Hz");
             if (_resamplers.Length > 0)
-            {
                 foreach (var item in _resamplers[0].ConversionSteps)
-                {
                     ConversionSteps.Add($"PCM {item.Item2}Hz");
-                }
-            }
 
             _delayMilliseconds = _decimation * ConversionSteps.Count;
         }

@@ -6,6 +6,7 @@ namespace NAudio.Dsd
     /// Represents the header information of a DSD (Direct Stream Digital) audio file, such as a DSF file.
     /// </summary>
     /// References: https://dsd-guide.com/sites/default/files/white-papers/DSFFileFormatSpec_E.pdf
+    /// References: https://www.sonicstudio.com/pdf/dsd/DSDIFF_1.5_Spec.pdf
     public struct DsdHeader
     {
         /// <summary>
@@ -147,7 +148,7 @@ namespace NAudio.Dsd
             throw new InvalidDataException("Not a valid file format");
         }
 
-        public static DsdHeader GetDsfHeader(Stream stream)
+        private static DsdHeader GetDsfHeader(Stream stream)
         {
             DsdHeader header = new();
             stream.Position = 0;
@@ -179,7 +180,7 @@ namespace NAudio.Dsd
             return header;
         }
 
-        public static DsdHeader GetDsdiffHeader(Stream stream)
+        private static DsdHeader GetDsdiffHeader(Stream stream)
         {
             DsdHeader header = new();
             stream.Position = 0;
